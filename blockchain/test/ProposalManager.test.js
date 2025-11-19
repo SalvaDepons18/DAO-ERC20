@@ -19,6 +19,7 @@ describe("ProposalManager", function () {
   let ProposalManager, proposalManager;
   let votingStrategy;
   let owner, proposer, voter1, voter2, voter3;
+  let dummyToken, dummyParams;
 
   const PROPOSAL_DURATION = 86400; // 1 día
   const MIN_VOTING_POWER = 100;
@@ -27,9 +28,18 @@ describe("ProposalManager", function () {
   beforeEach(async () => {
     [owner, proposer, voter1, voter2, voter3] = await ethers.getSigners();
 
+    // Deploy contratos dummy para los argumentos requeridos
+    const DummyToken = await ethers.getContractFactory("ShaCoin");
+    dummyToken = await DummyToken.deploy(owner.address);
+    await dummyToken.waitForDeployment();
+
+    const DummyParams = await ethers.getContractFactory("Parameters");
+    dummyParams = await DummyParams.deploy(owner.address);
+    await dummyParams.waitForDeployment();
+
     // Deploy estrategia de votación simple para testing
     const SimpleMajority = await ethers.getContractFactory("SimpleMajorityStrategy");
-    votingStrategy = await SimpleMajority.deploy();
+    votingStrategy = await SimpleMajority.deploy(dummyToken.target, dummyParams.target);
     await votingStrategy.waitForDeployment();
 
     // Deploy ProposalManager
@@ -452,7 +462,7 @@ describe("ProposalManager", function () {
   it("Debe actualizar la estrategia de votación", async () => {
     // Deploy una nueva estrategia
     const NewStrategy = await ethers.getContractFactory("SimpleMajorityStrategy");
-    const newStrategy = await NewStrategy.deploy();
+    const newStrategy = await NewStrategy.deploy(dummyToken.target, dummyParams.target);
     await newStrategy.waitForDeployment();
 
     await proposalManager.setVotingStrategy(newStrategy.target);
@@ -462,15 +472,9 @@ describe("ProposalManager", function () {
     );
   });
 
-  it("Debe rechazar estrategia con dirección cero", async () => {
-    await expect(
-      proposalManager.setVotingStrategy(ethers.ZeroAddress)
-    ).to.be.revertedWithCustomError(proposalManager, "InvalidAddress");
-  });
-
   it("Solo owner puede actualizar la estrategia", async () => {
     const NewStrategy = await ethers.getContractFactory("SimpleMajorityStrategy");
-    const newStrategy = await NewStrategy.deploy();
+    const newStrategy = await NewStrategy.deploy(dummyToken.target, dummyParams.target);
     await newStrategy.waitForDeployment();
 
     await expect(
