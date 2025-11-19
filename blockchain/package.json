@@ -11,11 +11,11 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "hardhat": "^2.22.7",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "hardhat": "^2.27.0",
     "hardhat-coverage": "^0.9.19"
   },
   "dependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@openzeppelin/contracts": "^5.4.0",
     "chai": "^4.5.0",
     "dotenv": "^17.2.3",
