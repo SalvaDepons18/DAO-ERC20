@@ -23,9 +23,10 @@ describe("Parameters", function () {
 
   it("Debe revertir si daoOwner es address(0)", async function () {
     const ZERO = ethers.ZeroAddress;
-    await expect(Parameters.deploy(ZERO)).to.be.revertedWith(
-      "Owner cannot be zero"
-    );
+
+    // OZ Ownable revierte ANTES de tu require
+    await expect(Parameters.deploy(ZERO))
+      .to.be.revertedWithCustomError(Parameters, "OwnableInvalidOwner");
   });
 
   // ---------------------------
@@ -42,7 +43,7 @@ describe("Parameters", function () {
   it("No-owner no puede cambiar tokensPerVotingPower", async function () {
     await expect(
       parameters.connect(other).setTokensPerVotingPower(200)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWithCustomError(parameters, "OwnableUnauthorizedAccount");
   });
 
   // ---------------------------
@@ -59,7 +60,7 @@ describe("Parameters", function () {
   it("No-owner no puede cambiar minStakeForVoting", async function () {
     await expect(
       parameters.connect(other).setMinStakeForVoting(123)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWithCustomError(parameters, "OwnableUnauthorizedAccount");
   });
 
   // ---------------------------
@@ -76,7 +77,7 @@ describe("Parameters", function () {
   it("No-owner no puede cambiar minStakeForProposing", async function () {
     await expect(
       parameters.connect(other).setMinStakeForProposing(99)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWithCustomError(parameters, "OwnableUnauthorizedAccount");
   });
 
   // ---------------------------
@@ -93,7 +94,7 @@ describe("Parameters", function () {
   it("No-owner no puede cambiar stakingLockTime", async function () {
     await expect(
       parameters.connect(other).setStakingLockTime(999)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWithCustomError(parameters, "OwnableUnauthorizedAccount");
   });
 
   // ---------------------------
@@ -110,7 +111,7 @@ describe("Parameters", function () {
   it("No-owner no puede cambiar proposalDuration", async function () {
     await expect(
       parameters.connect(other).setProposalDuration(10)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWithCustomError(parameters, "OwnableUnauthorizedAccount");
   });
 
   // ---------------------------
@@ -127,7 +128,7 @@ describe("Parameters", function () {
   it("No-owner no puede cambiar tokenPrice", async function () {
     await expect(
       parameters.connect(other).setTokenPrice(999)
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWithCustomError(parameters, "OwnableUnauthorizedAccount");
   });
 
 });
