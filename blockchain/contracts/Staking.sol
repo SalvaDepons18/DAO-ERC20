@@ -7,10 +7,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Interface de Parameters
- * @dev Debe proveer minStakeLock() en segundos.
+ * @dev Debe proveer stakingLockTime() en segundos.
  */
 interface IParameters {
-    function minStakeLock() external view returns (uint256);
+    function stakingLockTime() external view returns (uint256);
 }
 
 /**
@@ -23,12 +23,17 @@ contract Staking is ReentrancyGuard, Ownable {
     IERC20 public immutable token;
     IParameters public parameters;
 
-    // stakes separados
-    mapping(address => uint256) private votingStake;
-    mapping(address => uint256) private proposalStake;
+    // Locks separados por tipo
+    uint256 public votingLock;
+    uint256 public proposingLock;
 
-    // único lock por usuario
-    mapping(address => uint256) public lockedUntil;
+    // stakes separados
+    mapping(address => uint256) public votingStake;
+    mapping(address => uint256) public proposalStake;
+
+    // locks separados por usuario y tipo
+    mapping(address => uint256) public lockedUntilVoting;
+    mapping(address => uint256) public lockedUntilProposing;
 
     // Totales
     uint256 public totalVotingStaked;
@@ -56,44 +61,38 @@ contract Staking is ReentrancyGuard, Ownable {
     // -------------------------------------------------------------------------
 
     function stakeForVoting(uint256 amount) external nonReentrant {
-        require(amount > 0, "amount 0");
+        require(amount > 0, "Amount must be > 0");
 
         token.transferFrom(msg.sender, address(this), amount);
         votingStake[msg.sender] += amount;
         totalVotingStaked += amount;
 
-        uint256 newLock = block.timestamp + parameters.minStakeLock();
+        uint256 newLock = block.timestamp + votingLock;
+        lockedUntilVoting[msg.sender] = newLock;
 
-        if (lockedUntil[msg.sender] < newLock) {
-            lockedUntil[msg.sender] = newLock;
-        }
-
-        emit StakedForVoting(msg.sender, amount, lockedUntil[msg.sender]);
+        emit StakedForVoting(msg.sender, amount, newLock);
     }
 
     function stakeForProposing(uint256 amount) external nonReentrant {
-        require(amount > 0, "amount 0");
+        require(amount > 0, "Amount must be > 0");
 
         token.transferFrom(msg.sender, address(this), amount);
         proposalStake[msg.sender] += amount;
         totalProposalStaked += amount;
 
-        uint256 newLock = block.timestamp + parameters.minStakeLock();
+        uint256 newLock = block.timestamp + proposingLock;
+        lockedUntilProposing[msg.sender] = newLock;
 
-        if (lockedUntil[msg.sender] < newLock) {
-            lockedUntil[msg.sender] = newLock;
-        }
-
-        emit StakedForProposing(msg.sender, amount, lockedUntil[msg.sender]);
+        emit StakedForProposing(msg.sender, amount, newLock);
     }
 
     // -------------------------------------------------------------------------
     // Unstaking (solo después del lock)
     // -------------------------------------------------------------------------
 
-    function unstakeVoting(uint256 amount) external nonReentrant {
-        require(block.timestamp >= lockedUntil[msg.sender], "locked");
-        require(votingStake[msg.sender] >= amount, "insufficient");
+    function unstakeFromVoting(uint256 amount) external nonReentrant {
+        require(block.timestamp >= lockedUntilVoting[msg.sender], "Still locked");
+        require(votingStake[msg.sender] >= amount, "Not enough staked");
 
         votingStake[msg.sender] -= amount;
         totalVotingStaked -= amount;
@@ -103,9 +102,9 @@ contract Staking is ReentrancyGuard, Ownable {
         emit UnstakedVoting(msg.sender, amount);
     }
 
-    function unstakeProposing(uint256 amount) external nonReentrant {
-        require(block.timestamp >= lockedUntil[msg.sender], "locked");
-        require(proposalStake[msg.sender] >= amount, "insufficient");
+    function unstakeFromProposing(uint256 amount) external nonReentrant {
+        require(block.timestamp >= lockedUntilProposing[msg.sender], "Still locked");
+        require(proposalStake[msg.sender] >= amount, "Not enough staked");
 
         proposalStake[msg.sender] -= amount;
         totalProposalStaked -= amount;
@@ -130,6 +129,14 @@ contract Staking is ReentrancyGuard, Ownable {
     // -------------------------------------------------------------------------
     // Admin
     // -------------------------------------------------------------------------
+
+    function setVotingLock(uint256 newLock) external onlyOwner {
+        votingLock = newLock;
+    }
+
+    function setProposingLock(uint256 newLock) external onlyOwner {
+        proposingLock = newLock;
+    }
 
     function setParameters(address newParameters) external onlyOwner {
         require(newParameters != address(0), "zero");

@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("Staking", function () {
 
-  let ShaCoin, sha, Staking, staking;
+  let ShaCoin, sha, Staking, staking, Parameters, parameters;
   let owner, user, user2;
 
   const VOTING_LOCK = 1000;     // segundos
@@ -21,14 +21,22 @@ describe("Staking", function () {
     await sha.connect(owner).mint(user.address, 10_000);
     await sha.connect(owner).mint(user2.address, 10_000);
 
+    // Deploy Parameters
+    Parameters = await ethers.getContractFactory("Parameters");
+    parameters = await Parameters.deploy(owner.address);
+    await parameters.waitForDeployment();
+
     // Deploy Staking
     Staking = await ethers.getContractFactory("Staking");
     staking = await Staking.deploy(
       sha.target,
-      VOTING_LOCK,
-      PROPOSING_LOCK
+      parameters.target
     );
     await staking.waitForDeployment();
+
+    // Setear los locks en Staking
+    await staking.connect(owner).setVotingLock(VOTING_LOCK);
+    await staking.connect(owner).setProposingLock(PROPOSING_LOCK);
   });
 
   // ------------------------------------------------------------
