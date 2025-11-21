@@ -10,6 +10,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract ShaCoin is ERC20, Ownable {
 
+    // Errores
+    error InvalidAddress();
+    error InvalidAmount();
+
     /**
      * @param daoOwner Dirección del owner (contrato DAO).
      */
@@ -17,15 +21,15 @@ contract ShaCoin is ERC20, Ownable {
         ERC20("ShaCoin", "SHACO")
         Ownable(daoOwner)
     {
-        require(daoOwner != address(0), "Owner cannot be zero");
+        if (daoOwner == address(0)) revert InvalidAddress();
     }
 
     /**
      * @notice Mint de tokens. Solo la DAO (owner) puede mintear.
      */
     function mint(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "Cannot mint to zero address");
-        require(amount > 0, "Amount must be > 0");
+        if (to == address(0)) revert InvalidAddress();
+        if (amount == 0) revert InvalidAmount();
         _mint(to, amount);
     }
 

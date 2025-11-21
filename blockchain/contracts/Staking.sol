@@ -20,6 +20,12 @@ interface IParameters {
  */
 contract Staking is ReentrancyGuard, Ownable {
 
+    // Errores
+    error InvalidAddress();
+    error InvalidAmount();
+    error StakeLocked();
+    error InsufficientStake();
+
     IERC20 public immutable token;
     IParameters public parameters;
 
@@ -49,8 +55,8 @@ contract Staking is ReentrancyGuard, Ownable {
     constructor(address _token, address _parameters)
         Ownable(msg.sender)
     {
-        require(_token != address(0), "token zero");
-        require(_parameters != address(0), "parameters zero");
+        if (_token == address(0)) revert InvalidAddress();
+        if (_parameters == address(0)) revert InvalidAddress();
 
         token = IERC20(_token);
         parameters = IParameters(_parameters);
@@ -61,7 +67,7 @@ contract Staking is ReentrancyGuard, Ownable {
     // -------------------------------------------------------------------------
 
     function stakeForVoting(uint256 amount) external nonReentrant {
-        require(amount > 0, "Amount must be > 0");
+        if (amount == 0) revert InvalidAmount();
 
         token.transferFrom(msg.sender, address(this), amount);
         votingStake[msg.sender] += amount;
@@ -74,7 +80,7 @@ contract Staking is ReentrancyGuard, Ownable {
     }
 
     function stakeForProposing(uint256 amount) external nonReentrant {
-        require(amount > 0, "Amount must be > 0");
+        if (amount == 0) revert InvalidAmount();
 
         token.transferFrom(msg.sender, address(this), amount);
         proposalStake[msg.sender] += amount;
@@ -91,8 +97,8 @@ contract Staking is ReentrancyGuard, Ownable {
     // -------------------------------------------------------------------------
 
     function unstakeFromVoting(uint256 amount) external nonReentrant {
-        require(block.timestamp >= lockedUntilVoting[msg.sender], "Still locked");
-        require(votingStake[msg.sender] >= amount, "Not enough staked");
+        if (block.timestamp < lockedUntilVoting[msg.sender]) revert StakeLocked();
+        if (votingStake[msg.sender] < amount) revert InsufficientStake();
 
         votingStake[msg.sender] -= amount;
         totalVotingStaked -= amount;
@@ -103,8 +109,8 @@ contract Staking is ReentrancyGuard, Ownable {
     }
 
     function unstakeFromProposing(uint256 amount) external nonReentrant {
-        require(block.timestamp >= lockedUntilProposing[msg.sender], "Still locked");
-        require(proposalStake[msg.sender] >= amount, "Not enough staked");
+        if (block.timestamp < lockedUntilProposing[msg.sender]) revert StakeLocked();
+        if (proposalStake[msg.sender] < amount) revert InsufficientStake();
 
         proposalStake[msg.sender] -= amount;
         totalProposalStaked -= amount;
@@ -139,7 +145,7 @@ contract Staking is ReentrancyGuard, Ownable {
     }
 
     function setParameters(address newParameters) external onlyOwner {
-        require(newParameters != address(0), "zero");
+        if (newParameters == address(0)) revert InvalidAddress();
         emit ParametersUpdated(address(parameters), newParameters);
         parameters = IParameters(newParameters);
     }

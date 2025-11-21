@@ -105,14 +105,20 @@ contract ProposalManager is ReentrancyGuard, Ownable {
     error InvalidVoteType();
     error InvalidAddress();
     error InsufficientVotingPower();
+    error InvalidVotingStrategy();
+    error InvalidDuration();
+    error EmptyTitle();
+    error EmptyDescription();
+    error NotVotedYet();
+    error DeadlineNotPassed();
 
     constructor(
         address _votingStrategy,
         uint256 _minVotingPowerToPropose,
         uint256 _defaultProposalDuration
     ) Ownable(msg.sender) {
-        require(_votingStrategy != address(0), "Invalid voting strategy");
-        require(_defaultProposalDuration > 0, "Duration must be > 0");
+        if (_votingStrategy == address(0)) revert InvalidVotingStrategy();
+        if (_defaultProposalDuration == 0) revert InvalidDuration();
 
         votingStrategy = IVotingStrategy(_votingStrategy);
         minVotingPowerToPropose = _minVotingPowerToPropose;
@@ -135,9 +141,9 @@ contract ProposalManager is ReentrancyGuard, Ownable {
         string calldata _description,
         uint256 _votingPower
     ) external nonReentrant returns (uint256) {
-        require(bytes(_title).length > 0, "Title cannot be empty");
-        require(bytes(_description).length > 0, "Description cannot be empty");
-        require(_votingPower >= minVotingPowerToPropose, "Insufficient voting power");
+        if (bytes(_title).length == 0) revert EmptyTitle();
+        if (bytes(_description).length == 0) revert EmptyDescription();
+        if (_votingPower < minVotingPowerToPropose) revert InsufficientVotingPower();
 
         uint256 proposalId = proposalCount++;
         uint256 deadline = block.timestamp + defaultProposalDuration;
@@ -173,7 +179,7 @@ contract ProposalManager is ReentrancyGuard, Ownable {
         VoteType _voteType,
         uint256 _votingWeight
     ) external nonReentrant {
-        require(_votingWeight > 0, "Voting weight must be > 0");
+        if (_votingWeight == 0) revert InvalidVoteType();
         
         Proposal storage proposal = proposals[_proposalId];
         
@@ -208,7 +214,7 @@ contract ProposalManager is ReentrancyGuard, Ownable {
         VoteType _newVoteType,
         uint256 _votingWeight
     ) external nonReentrant {
-        require(_votingWeight > 0, "Voting weight must be > 0");
+        if (_votingWeight == 0) revert InvalidVoteType();
         
         Proposal storage proposal = proposals[_proposalId];
         
@@ -219,7 +225,7 @@ contract ProposalManager is ReentrancyGuard, Ownable {
         if (_newVoteType == VoteType.NONE) revert InvalidVoteType();
 
         VoteType currentVote = votes[_proposalId][msg.sender];
-        if (currentVote == VoteType.NONE) revert("Not voted yet");
+        if (currentVote == VoteType.NONE) revert NotVotedYet();
 
         // Restar voto anterior
         if (currentVote == VoteType.FOR) {
@@ -289,7 +295,7 @@ contract ProposalManager is ReentrancyGuard, Ownable {
 
         if (proposal.createdAt == 0) revert ProposalNotFound();
         if (proposal.state != ProposalState.ACTIVE) revert ProposalNotActive();
-        if (block.timestamp <= proposal.deadline) revert("Deadline not passed");
+        if (block.timestamp <= proposal.deadline) revert DeadlineNotPassed();
 
         proposal.state = ProposalState.EXPIRED;
         emit ProposalStateChanged(_proposalId, ProposalState.ACTIVE, ProposalState.EXPIRED);
@@ -383,7 +389,7 @@ contract ProposalManager is ReentrancyGuard, Ownable {
      * @param _newVotingStrategy Dirección de la nueva estrategia
      */
     function setVotingStrategy(address _newVotingStrategy) external onlyOwner {
-        if (_newVotingStrategy == address(0)) revert InvalidAddress();
+        if (_newVotingStrategy == address(0)) revert InvalidVotingStrategy();
         emit VotingStrategyUpdated(address(votingStrategy), _newVotingStrategy);
         votingStrategy = IVotingStrategy(_newVotingStrategy);
     }
@@ -401,7 +407,7 @@ contract ProposalManager is ReentrancyGuard, Ownable {
      * @param _newDuration Nueva duración en segundos
      */
     function setDefaultProposalDuration(uint256 _newDuration) external onlyOwner {
-        require(_newDuration > 0, "Duration must be > 0");
+        if (_newDuration == 0) revert InvalidDuration();
         defaultProposalDuration = _newDuration;
     }
 }

@@ -13,6 +13,9 @@ import "./Staking.sol";
  */
 contract SimpleMajorityStrategy is IVotingStrategy {
     
+    // Errores
+    error InvalidAddress();
+
     Staking public staking;
     
     Parameters public parameters;
@@ -21,8 +24,8 @@ contract SimpleMajorityStrategy is IVotingStrategy {
      * @dev Constructor que inicializa las referencias a Staking y Parameters
      */
     constructor(address _staking, address _parameters) {
-        require(_staking != address(0), "Staking address cannot be zero");
-        require(_parameters != address(0), "Parameters address cannot be zero");
+        if (_staking == address(0)) revert InvalidAddress();
+        if (_parameters == address(0)) revert InvalidAddress();
         
         staking = Staking(_staking);
         parameters = Parameters(_parameters);
@@ -37,7 +40,7 @@ contract SimpleMajorityStrategy is IVotingStrategy {
         override 
         returns (uint256 votingPower) 
     {
-        require(user != address(0), "User address cannot be zero");
+        if (user == address(0)) revert InvalidAddress();
         
         uint256 userStake = staking.getVotingStake(user);
         uint256 tokensPerVP = parameters.tokensPerVotingPower();
