@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IVoteStrategy.sol";
+import "./IVotingStrategy.sol";
 import "./Parameteres.sol";
 import "./Staking.sol";
 
@@ -55,26 +55,17 @@ contract SimpleMajorityStrategy is IVotingStrategy {
     }
 
     /**
-     * @notice Determina si una propuesta es aceptada.
-     * */
-    function isProposalAccepted(Proposal memory p) 
-        external 
-        view 
-        override 
-        returns (bool accepted) 
-    {
-        return p.votesFor > p.votesAgainst;
+     * @notice Determina si una propuesta es aceptada
+     * @dev La propuesta es aceptada si votesFor > votesAgainst
+     * @param votesFor Votos a favor
+     * @param votesAgainst Votos en contra
+     * @return bool true si la propuesta es aceptada
+     */
+    function isProposalAccepted(
+        uint256 votesFor,
+        uint256 votesAgainst,
+        uint256 /*totalVotingPower*/
+    ) external pure override returns (bool) {
+        return votesFor > votesAgainst;
     }
-
-        /**
-         * @notice Determina si una propuesta es aceptada (firma esperada por ProposalManager)
-         * @dev La propuesta es aceptada si votesFor > votesAgainst
-         */
-        function isProposalAccepted(uint256 votesFor, uint256 votesAgainst, uint256 /*totalVotingPower*/) 
-            external 
-            pure 
-            returns (bool)
-        {
-            return votesFor > votesAgainst;
-        }
 }

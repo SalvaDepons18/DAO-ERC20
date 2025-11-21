@@ -3,18 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
-/**
- * @title Interface de Estrategia de Votación
- * @dev Define la interfaz para evaluar si una propuesta fue aceptada
- */
-interface IVotingStrategy {
-    function isProposalAccepted(
-        uint256 votesFor,
-        uint256 votesAgainst,
-        uint256 totalVotingPower
-    ) external view returns (bool);
-}
+import "./IVotingStrategy.sol";
 
 /**
  * @title Tipos de Voto
@@ -170,7 +159,6 @@ contract ProposalManager is ReentrancyGuard, Ownable {
 
     /**
      * @dev Emite un voto en una propuesta
-     * @param _proposalId ID de la propuesta
      * @param _voteType Tipo de voto (FOR o AGAINST)
      * @param _votingWeight Peso del voto (poder de voto del votante)
      */

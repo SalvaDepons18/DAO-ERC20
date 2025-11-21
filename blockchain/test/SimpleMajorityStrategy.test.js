@@ -147,100 +147,37 @@ describe("SimpleMajorityStrategy", function () {
   // ---------------------------
   describe("isProposalAccepted", function () {
     it("Debe aceptar propuesta si votesFor > votesAgainst", async function () {
-      const proposal = {
-        votesFor: 100,
-        votesAgainst: 50,
-        totalVotingPower: 150,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
-
-      const isAccepted = await strategy.isProposalAccepted(proposal);
+      const isAccepted = await strategy.isProposalAccepted(100, 50, 150);
       expect(isAccepted).to.be.true;
     });
 
     it("Debe rechazar propuesta si votesFor < votesAgainst", async function () {
-      const proposal = {
-        votesFor: 30,
-        votesAgainst: 70,
-        totalVotingPower: 100,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
-
-      const isAccepted = await strategy.isProposalAccepted(proposal);
+      const isAccepted = await strategy.isProposalAccepted(30, 70, 100);
       expect(isAccepted).to.be.false;
     });
 
     it("Debe rechazar propuesta si votesFor == votesAgainst (empate)", async function () {
-      const proposal = {
-        votesFor: 50,
-        votesAgainst: 50,
-        totalVotingPower: 100,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
-
-      const isAccepted = await strategy.isProposalAccepted(proposal);
+      const isAccepted = await strategy.isProposalAccepted(50, 50, 100);
       expect(isAccepted).to.be.false;
     });
 
     it("Debe aceptar propuesta con votesFor muy superior", async function () {
-      const proposal = {
-        votesFor: 1000,
-        votesAgainst: 1,
-        totalVotingPower: 1001,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
-
-      const isAccepted = await strategy.isProposalAccepted(proposal);
+      const isAccepted = await strategy.isProposalAccepted(1000, 1, 1001);
       expect(isAccepted).to.be.true;
     });
 
     it("Debe funcionar con valores mínimos", async function () {
-      const proposal = {
-        votesFor: 1,
-        votesAgainst: 0,
-        totalVotingPower: 1,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
-
-      const isAccepted = await strategy.isProposalAccepted(proposal);
+      const isAccepted = await strategy.isProposalAccepted(1, 0, 1);
       expect(isAccepted).to.be.true;
     });
 
     it("Debe rechazar si no hay votos a favor", async function () {
-      const proposal = {
-        votesFor: 0,
-        votesAgainst: 10,
-        totalVotingPower: 10,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
-
-      const isAccepted = await strategy.isProposalAccepted(proposal);
+      const isAccepted = await strategy.isProposalAccepted(0, 10, 10);
       expect(isAccepted).to.be.false;
     });
 
     it("Debe rechazar si ambos votos son 0", async function () {
-      const proposal = {
-        votesFor: 0,
-        votesAgainst: 0,
-        totalVotingPower: 0,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
-
-      const isAccepted = await strategy.isProposalAccepted(proposal);
+      const isAccepted = await strategy.isProposalAccepted(0, 0, 0);
       expect(isAccepted).to.be.false;
     });
   });
@@ -273,16 +210,11 @@ describe("SimpleMajorityStrategy", function () {
       const vp2 = await strategy.calculateVotingPower(user2.address);
       const vp3 = await strategy.calculateVotingPower(user3.address);
       
-      const proposal = {
-        votesFor: vp1 + vp2, // 15 VP
-        votesAgainst: vp3,   // 3 VP
-        totalVotingPower: vp1 + vp2 + vp3,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
+      const votesFor = vp1 + vp2; // 15 VP
+      const votesAgainst = vp3;   // 3 VP
+      const totalVotingPower = vp1 + vp2 + vp3;
 
-      expect(await strategy.isProposalAccepted(proposal)).to.be.true;
+      expect(await strategy.isProposalAccepted(votesFor, votesAgainst, totalVotingPower)).to.be.true;
     });
 
     it("Escenario 2: Mayoría en contra rechaza", async function () {
@@ -293,31 +225,21 @@ describe("SimpleMajorityStrategy", function () {
       const vp2 = await strategy.calculateVotingPower(user2.address);
       const vp3 = await strategy.calculateVotingPower(user3.address);
       
-      const proposal = {
-        votesFor: vp2 + vp3,     // 8 VP
-        votesAgainst: vp1,       // 10 VP
-        totalVotingPower: vp1 + vp2 + vp3,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
+      const votesFor = vp2 + vp3;     // 8 VP
+      const votesAgainst = vp1;       // 10 VP
+      const totalVotingPower = vp1 + vp2 + vp3;
 
-      expect(await strategy.isProposalAccepted(proposal)).to.be.false;
+      expect(await strategy.isProposalAccepted(votesFor, votesAgainst, totalVotingPower)).to.be.false;
     });
 
     it("Escenario 3: Un solo votante a favor, sin oposición", async function () {
       const vp1 = await strategy.calculateVotingPower(user1.address);
       
-      const proposal = {
-        votesFor: vp1,
-        votesAgainst: 0n,
-        totalVotingPower: vp1,
-        createdAt: Math.floor(Date.now() / 1000),
-        issuer: user1.address,
-        active: true
-      };
+      const votesFor = vp1;
+      const votesAgainst = 0n;
+      const totalVotingPower = vp1;
 
-      expect(await strategy.isProposalAccepted(proposal)).to.be.true;
+      expect(await strategy.isProposalAccepted(votesFor, votesAgainst, totalVotingPower)).to.be.true;
     });
   });
 });
