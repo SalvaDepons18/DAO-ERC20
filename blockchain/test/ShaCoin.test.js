@@ -43,13 +43,13 @@ describe("ShaCoin", function () {
   it("Debe revertir si minteás a address 0", async () => {
     await expect(
       sha.connect(owner).mint(ethers.ZeroAddress, 1000)
-    ).to.be.revertedWith("Cannot mint to zero address");
+    ).to.be.revertedWithCustomError(sha, "InvalidAddress");
   });
 
   it("Debe revertir si amount es 0", async () => {
     await expect(
       sha.connect(owner).mint(addr1.address, 0)
-    ).to.be.revertedWith("Amount must be > 0");
+    ).to.be.revertedWithCustomError(sha, "InvalidAmount");
   });
 
   it("Debe revertir si un no-owner intenta mintear", async () => {

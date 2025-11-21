@@ -98,19 +98,19 @@ describe("ProposalManager", function () {
         "Description",
         MIN_VOTING_POWER - 1
       )
-    ).to.be.revertedWith("Insufficient voting power");
+    ).to.be.revertedWithCustomError(proposalManager, "InsufficientVotingPower");
   });
 
   it("Debe rechazar propuesta con título vacío", async () => {
     await expect(
       proposalManager.connect(proposer).createProposal("", "Description", MIN_VOTING_POWER)
-    ).to.be.revertedWith("Title cannot be empty");
+    ).to.be.revertedWithCustomError(proposalManager, "EmptyTitle");
   });
 
   it("Debe rechazar propuesta sin descripción", async () => {
     await expect(
       proposalManager.connect(proposer).createProposal("Title", "", MIN_VOTING_POWER)
-    ).to.be.revertedWith("Description cannot be empty");
+    ).to.be.revertedWithCustomError(proposalManager, "EmptyDescription");
   });
 
   it("Emite evento ProposalCreated", async () => {
@@ -171,7 +171,7 @@ describe("ProposalManager", function () {
 
     await expect(
       proposalManager.connect(voter1).vote(0, VoteType.FOR, 0)
-    ).to.be.revertedWith("Voting weight must be > 0");
+    ).to.be.revertedWithCustomError(proposalManager, "InvalidVoteType");
   });
 
   it("Debe rechazar voto de tipo NONE", async () => {
@@ -507,6 +507,6 @@ describe("ProposalManager", function () {
   it("Debe rechazar duración de propuesta con valor 0", async () => {
     await expect(
       proposalManager.setDefaultProposalDuration(0)
-    ).to.be.revertedWith("Duration must be > 0");
+    ).to.be.revertedWithCustomError(proposalManager, "InvalidDuration");
   });
 });

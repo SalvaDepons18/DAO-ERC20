@@ -48,13 +48,13 @@ describe("SimpleMajorityStrategy", function () {
     it("Debe revertir si la dirección de Staking es address(0)", async function () {
       await expect(
         SimpleMajorityStrategy.deploy(ethers.ZeroAddress, parameters.target)
-      ).to.be.revertedWith("Staking address cannot be zero");
+      ).to.be.revertedWithCustomError(SimpleMajorityStrategy, "InvalidAddress");
     });
 
     it("Debe revertir si la dirección de Parameters es address(0)", async function () {
       await expect(
         SimpleMajorityStrategy.deploy(staking.target, ethers.ZeroAddress)
-      ).to.be.revertedWith("Parameters address cannot be zero");
+      ).to.be.revertedWithCustomError(SimpleMajorityStrategy, "InvalidAddress");
     });
   });
 
@@ -122,7 +122,7 @@ describe("SimpleMajorityStrategy", function () {
     it("Debe revertir si la dirección del usuario es address(0)", async function () {
       await expect(
         strategy.calculateVotingPower(ethers.ZeroAddress)
-      ).to.be.revertedWith("User address cannot be zero");
+      ).to.be.revertedWithCustomError(strategy, "InvalidAddress");
     });
 
     it("Debe manejar stakes parciales (división entera)", async function () {
