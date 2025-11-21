@@ -18,7 +18,7 @@ contract ShaCoin is ERC20, Ownable {
      * @param daoOwner Dirección del owner (contrato DAO).
      */
     constructor(address daoOwner)
-        ERC20("ShaCoin", "SHACO")
+        ERC20("ShaCoin", "SHA")
         Ownable(daoOwner)
     {
         if (daoOwner == address(0)) revert InvalidAddress();

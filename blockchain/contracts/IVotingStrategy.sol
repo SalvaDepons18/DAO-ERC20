@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 /**
  * @title IVotingStrategy
  * @dev Interfaz base para todas las estrategias de votación.
- *.
  */
 interface IVotingStrategy {
 
@@ -20,24 +19,14 @@ interface IVotingStrategy {
 
     /**
      * @notice Determina si una propuesta es aceptada o rechazada.
-     * @param p Struct con datos de la propuesta (debe ser definido externamente)
+     * @param votesFor Votos a favor
+     * @param votesAgainst Votos en contra
+     * @param totalVotingPower Poder de voto total del sistema
      * @return accepted true si la propuesta pasa la estrategia, false si no
      */
-    function isProposalAccepted(Proposal memory p)
-        external
-        view
-        returns (bool accepted);
-}
-
-/**
- * @dev Struct esperado por la estrategia. 
- *
- */
-struct Proposal {
-    uint256 votesFor;
-    uint256 votesAgainst;
-    uint256 totalVotingPower;
-    uint256 createdAt;
-    address issuer;
-    bool active;
+    function isProposalAccepted(
+        uint256 votesFor,
+        uint256 votesAgainst,
+        uint256 totalVotingPower
+    ) external view returns (bool);
 }
