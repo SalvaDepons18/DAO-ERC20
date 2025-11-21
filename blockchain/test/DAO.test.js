@@ -73,10 +73,11 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
   // =====================================================
 
   it("buyTokens: compra tokens correctamente", async () => {
+    // price = 1 ether, enviamos 1 ether → amount = 1 ether / 1 ether = 1
     await dao.connect(user).buyTokens({ value: ethers.parseEther("1") });
 
     expect(await token.lastMintTo()).to.equal(user.address);
-    expect(await token.lastMintAmount()).to.equal(ethers.parseEther("1") / 1n);
+    expect(await token.lastMintAmount()).to.equal(1n);
   });
 
   it("buyTokens: revierte si price = 0", async () => {
@@ -95,13 +96,10 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
     ).to.be.revertedWithCustomError(dao, "InsufficientETH");
   });
 
-  it("buyTokens: revierte si amount = 0", async () => {
-    await parameters.setPrice(ethers.parseEther("10"));
-
-    await expect(
-      dao.connect(user).buyTokens({ value: ethers.parseEther("1") })
-    ).to.be.revertedWithCustomError(dao, "ZeroAmount");
-  });
+  // NOTA: Este test es imposible de alcanzar con la lógica actual del contrato
+  // porque si msg.value >= price, entonces amount = msg.value / price >= 1 siempre.
+  // La única forma de que amount sea 0 es si msg.value < price, pero eso activa InsufficientETH primero.
+  // Se elimina este test ya que el caso está implícitamente cubierto por la lógica del contrato.
 
   it("buyTokens: revierte si DAO está en pánico", async () => {
     await panicManager.setPanic(true);
