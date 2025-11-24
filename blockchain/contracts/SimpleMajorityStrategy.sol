@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./IVotingStrategy.sol";
+import "./interfaces/IVotingStrategy.sol";
 import "./Parameteres.sol";
-import "./Staking.sol";
+import "./interfaces/IStaking.sol";
+
 
 /**
  * @title SimpleMajorityStrategy
@@ -16,7 +17,7 @@ contract SimpleMajorityStrategy is IVotingStrategy {
     // Errores
     error InvalidAddress();
 
-    Staking public staking;
+    IStaking public staking;
     
     Parameters public parameters;
 
@@ -27,7 +28,7 @@ contract SimpleMajorityStrategy is IVotingStrategy {
         if (_staking == address(0)) revert InvalidAddress();
         if (_parameters == address(0)) revert InvalidAddress();
         
-        staking = Staking(_staking);
+        staking = IStaking(_staking);
         parameters = Parameters(_parameters);
     }
 

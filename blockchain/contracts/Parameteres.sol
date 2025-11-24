@@ -3,7 +3,9 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Parameters is Ownable {
+import "./interfaces/IParameters.sol";
+
+contract Parameters is Ownable, IParameters {
 
     uint256 public tokensPerVotingPower;
     uint256 public minStakeForVoting;

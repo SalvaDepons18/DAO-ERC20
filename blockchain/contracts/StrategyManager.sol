@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./IVotingStrategy.sol";
+import "./interfaces/IVotingStrategy.sol";
 
 /**
  * @title StrategyManager
@@ -11,7 +11,9 @@ import "./IVotingStrategy.sol";
  * Solo el owner (multisig) puede actualizar la estrategia.
 **/
 
-contract StrategyManager is Ownable {
+import "./interfaces/IStrategyManager.sol";
+
+contract StrategyManager is Ownable, IStrategyManager {
     IVotingStrategy public activeStrategy;
 
     event StrategyChanged(

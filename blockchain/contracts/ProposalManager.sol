@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./IVotingStrategy.sol";
+import "./interfaces/IVotingStrategy.sol";
 
 /**
  * @title Tipos de Voto
@@ -44,7 +44,9 @@ struct Proposal {
  * @dev Gestiona la vida completa de las propuestas: creación, votación, conteo y cambio de estado
  * No contiene lógica de estrategia ni cálculo de poder de voto
  */
-contract ProposalManager is ReentrancyGuard, Ownable {
+import "./interfaces/IProposalManager.sol";
+
+contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
 
     IVotingStrategy public votingStrategy;
     

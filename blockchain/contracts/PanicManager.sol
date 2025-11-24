@@ -15,7 +15,9 @@ pragma solidity ^0.8.20;
 * - otros contratos llaman a checkNotPanicked() para bloquear operaciones
  */
 
- contract PanicManager {
+import "./interfaces/IPanicManager.sol";
+
+contract PanicManager is IPanicManager {
     error NotPanicOperator();
     error InvalidAddress();
     error PanicActive();

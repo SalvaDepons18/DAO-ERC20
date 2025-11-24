@@ -18,7 +18,9 @@ interface IParameters {
  * @dev Maneja staking separado para votar y para proponer.
  * Compatible con ShaCoin (ERC20 estándar).
  */
-contract Staking is ReentrancyGuard, Ownable {
+import "./interfaces/IStaking.sol";
+
+contract Staking is ReentrancyGuard, Ownable, IStaking {
 
     // Errores
     error InvalidAddress();

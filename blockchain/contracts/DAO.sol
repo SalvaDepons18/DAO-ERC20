@@ -1,35 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-interface IGovernanceToken {
-    function mint(address _to, uint256 _amount) external;
-    function burn(address _from, uint256 _amount) external;
-}
-
-interface IStaking {
-    function stakeForVoting(address _user, uint256 _amount) external;
-    function stakeForProposing(address _user, uint256 _amount) external;
-    function unstakeVoting(address _user) external;
-    function unstakeProposing(address _user) external;
-}
-
-interface IProposalManager {
-    function createProposal(address _creator, string calldata _title, string calldata _description) external returns (uint256);
-    function vote(uint256 _proposalId, address _voter, bool _support) external;
-}
-
-interface IStrategyManager {
-    function setStrategy(address _newStrategy) external;
-    function getStrategy() external view returns (address);
-}
-
-interface IParameters {
-    function tokenPrice() external view returns (uint256);
-}
-
-interface IPanicManager {
-    function checkNotPanicked() external view;
-}
+import "./interfaces/IGovernanceToken.sol";
+import "./interfaces/IStaking.sol";
+import "./interfaces/IProposalManager.sol";
+import "./interfaces/IStrategyManager.sol";
+import "./interfaces/IParameters.sol";
+import "./interfaces/IPanicManager.sol";
 
 contract DAO {
     error NotOwner();
@@ -97,41 +74,43 @@ contract DAO {
         token.mint(msg.sender, _amount);
     }
 
+
     function createProposal(string calldata _title, string calldata _description)
         external
         notInPanic
         returns (uint256)
     {
         if (bytes(_title).length == 0 || bytes(_description).length == 0) revert EmptyString();
-
-        return proposalManager.createProposal(msg.sender, _title, _description);
+        // Se asume que el poder de voto se calcula aquí, puedes ajustar según tu lógica
+        uint256 votingPower = staking.getVotingStake(msg.sender);
+        return proposalManager.createProposal(_title, _description, votingPower);
     }
 
-    function vote(uint256 _proposalId, bool _support)
+    function vote(uint256 _proposalId, uint8 _voteType, uint256 _votingWeight)
         external
         notInPanic
     {
-        proposalManager.vote(_proposalId, msg.sender, _support);
+        proposalManager.vote(_proposalId, IProposalManager.VoteType(_voteType), _votingWeight);
     }
 
     function stakeForVoting(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
         token.burn(msg.sender, _amount);
-        staking.stakeForVoting(msg.sender, _amount);
+        staking.stakeForVoting(_amount);
     }
 
     function stakeForProposing(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
         token.burn(msg.sender, _amount);
-        staking.stakeForProposing(msg.sender, _amount);
+        staking.stakeForProposing(_amount);
     }
 
-    function unstakeVoting() external notInPanic {
-        staking.unstakeVoting(msg.sender);
+    function unstakeVoting(uint256 _amount) external notInPanic {
+        staking.unstakeFromVoting(_amount);
     }
 
-    function unstakeProposing() external notInPanic {
-        staking.unstakeProposing(msg.sender);
+    function unstakeProposing(uint256 _amount) external notInPanic {
+        staking.unstakeFromProposing(_amount);
     }
 
     function mintTokens(address _to, uint256 _amount) external onlyOwner notInPanic{
@@ -142,6 +121,6 @@ contract DAO {
 
     function changeStrategy(address _newStrategy) external onlyOwner notInPanic{
         if (_newStrategy == address(0)) revert InvalidAddress();
-        strategyManager.setStrategy(_newStrategy);
+        strategyManager.setActiveStrategy(_newStrategy);
     }
 }
