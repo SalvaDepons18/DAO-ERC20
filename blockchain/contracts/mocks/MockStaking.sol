@@ -4,22 +4,38 @@ pragma solidity ^0.8.20;
 contract MockStaking {
     address public lastUser;
     uint256 public lastAmount;
+    
+    // Variable para almacenar el usuario actual (establecida por el DAO)
+    address public currentUser;
 
-    function stakeForVoting(address _user, uint256 _amount) external {
-        lastUser = _user;
+    function stakeForVoting(uint256 _amount) external {
+        lastUser = currentUser != address(0) ? currentUser : msg.sender;
         lastAmount = _amount;
     }
 
-    function stakeForProposing(address _user, uint256 _amount) external {
-        lastUser = _user;
+    function stakeForProposing(uint256 _amount) external {
+        lastUser = currentUser != address(0) ? currentUser : msg.sender;
         lastAmount = _amount;
     }
 
-    function unstakeVoting(address _user) external {
-        lastUser = _user;
+    function unstakeFromVoting(uint256 _amount) external {
+        lastUser = currentUser != address(0) ? currentUser : msg.sender;
     }
 
-    function unstakeProposing(address _user) external {
-        lastUser = _user;
+    function unstakeFromProposing(uint256 _amount) external {
+        lastUser = currentUser != address(0) ? currentUser : msg.sender;
+    }
+
+    function getVotingStake(address _user) external pure returns (uint256) {
+        return 0;
+    }
+
+    function getProposingStake(address _user) external pure returns (uint256) {
+        return 0;
+    }
+    
+    // Función que el DAO llama para establecer el usuario actual
+    function setCurrentUser(address _user) external {
+        currentUser = _user;
     }
 }

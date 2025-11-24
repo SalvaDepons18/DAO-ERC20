@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 contract MockStrategyManager {
     address public current;
 
-    function setStrategy(address _new) external {
+    function setActiveStrategy(address _new) external {
         current = _new;
     }
 

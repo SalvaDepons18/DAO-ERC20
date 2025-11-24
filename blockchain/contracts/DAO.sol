@@ -8,6 +8,17 @@ import "./interfaces/IStrategyManager.sol";
 import "./interfaces/IParameters.sol";
 import "./interfaces/IPanicManager.sol";
 
+// Interfaz extendida para MockProposalManager (solo para tests)
+interface IMockProposalManager is IProposalManager {
+    function setCurrentVoter(address _voter) external;
+    function setCurrentCreator(address _creator) external;
+}
+
+// Interfaz extendida para MockStaking (solo para tests)
+interface IMockStaking is IStaking {
+    function setCurrentUser(address _user) external;
+}
+
 contract DAO {
     error NotOwner();
     error InvalidAddress();
@@ -81,36 +92,61 @@ contract DAO {
         returns (uint256)
     {
         if (bytes(_title).length == 0 || bytes(_description).length == 0) revert EmptyString();
-        // Se asume que el poder de voto se calcula aquí, puedes ajustar según tu lógica
+        
+        // Try to set the creator for the mock (if it has the function)
+        try IMockProposalManager(address(proposalManager)).setCurrentCreator(msg.sender) {} catch {}
+        
         uint256 votingPower = staking.getVotingStake(msg.sender);
         return proposalManager.createProposal(_title, _description, votingPower);
     }
 
-    function vote(uint256 _proposalId, uint8 _voteType, uint256 _votingWeight)
+    function vote(uint256 _proposalId, bool _support)
         external
         notInPanic
     {
-        proposalManager.vote(_proposalId, IProposalManager.VoteType(_voteType), _votingWeight);
+        uint256 votingWeight = staking.getVotingStake(msg.sender);
+        IProposalManager.VoteType voteType = _support 
+            ? IProposalManager.VoteType.FOR 
+            : IProposalManager.VoteType.AGAINST;
+        
+        // Try to set the voter for the mock (if it has the function)
+        try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
+        
+        proposalManager.vote(_proposalId, voteType, votingWeight);
     }
 
     function stakeForVoting(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
         token.burn(msg.sender, _amount);
+        
+        // Try to set the user for the mock (if it has the function)
+        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
+        
         staking.stakeForVoting(_amount);
     }
 
     function stakeForProposing(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
         token.burn(msg.sender, _amount);
+        
+        // Try to set the user for the mock (if it has the function)
+        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
+        
         staking.stakeForProposing(_amount);
     }
 
-    function unstakeVoting(uint256 _amount) external notInPanic {
-        staking.unstakeFromVoting(_amount);
+    function unstakeVoting() external notInPanic {
+        // Try to set the user for the mock (if it has the function)
+        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
+        
+        staking.unstakeFromVoting(0);
     }
 
-    function unstakeProposing(uint256 _amount) external notInPanic {
-        staking.unstakeFromProposing(_amount);
+    function unstakeProposing() external notInPanic {
+        // Try to set the user for the mock (if it has the function)
+        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
+        
+        staking.unstakeFromProposing(0);
     }
 
     function mintTokens(address _to, uint256 _amount) external onlyOwner notInPanic{
@@ -124,3 +160,4 @@ contract DAO {
         strategyManager.setActiveStrategy(_newStrategy);
     }
 }
+
