@@ -19,6 +19,7 @@ interface IProposalManager {
     }
 
     function createProposal(string calldata _title, string calldata _description, uint256 _votingPower) external returns (uint256);
+    function proposalCount() external view returns (uint256);
     function vote(uint256 _proposalId, VoteType _voteType) external;
     function changeVote(uint256 _proposalId, VoteType _newVoteType) external;
     function finalizeProposal(uint256 _proposalId, uint256 _totalVotingPower) external;

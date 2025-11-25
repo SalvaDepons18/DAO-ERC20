@@ -497,6 +497,24 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
       panicked = await dao.isPanicked();
       expect(panicked).to.equal(true);
     });
+
+    it("getVotingPower: delega correctamente a estrategia activa", async () => {
+      const MockVotingStrategy = await ethers.getContractFactory("MockVotingStrategy");
+      const mockStrategy = await MockVotingStrategy.deploy(ethers.parseEther("42"));
+      await strategyManager.setActiveStrategy(mockStrategy.target);
+      const vp = await dao.getVotingPower(user.address);
+      expect(vp).to.equal(ethers.parseEther("42"));
+    });
+
+    it("getProposalCount: incrementa tras crear propuestas", async () => {
+      // Ajustar mínimo de stake para proponer a 0 para simplificar
+      await parameters.setMinStakeForProposing(0);
+      // Crear dos propuestas
+      await dao.connect(user).createProposal("P1", "D1");
+      await dao.connect(user).createProposal("P2", "D2");
+      const count = await dao.getProposalCount();
+      expect(count).to.equal(2);
+    });
   });
 
   // =====================================================

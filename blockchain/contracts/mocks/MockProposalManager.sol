@@ -26,6 +26,7 @@ struct Proposal {
 
 contract MockProposalManager {
     uint256 public nextId = 1;
+    uint256 public proposalCount; // track number of created proposals
 
     address public lastCreator;
     string public lastTitle;
@@ -50,6 +51,7 @@ contract MockProposalManager {
         lastCreator = currentCreator;
         lastTitle = _title;
         lastDescription = _description;
+        proposalCount += 1;
         return nextId++;
     }
 

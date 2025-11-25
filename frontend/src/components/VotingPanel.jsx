@@ -1,39 +1,55 @@
 import { useState, useEffect } from 'react';
-import { vote, changeVote, isPanicked } from '../services/web3Service';
+import { vote, changeVote, getUserVote, getSigner } from '../services/web3Service';
 import useParameters from '../hooks/useParameters';
 
 export default function VotingPanel({ proposalId }) {
-  const [hasVoted, setHasVoted] = useState(false);
-  const [userVote, setUserVote] = useState(null);
+  const [userVote, setUserVote] = useState('NONE');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [panicked, setPanicked] = useState(false);
   const { params, loading: paramsLoading, error: paramsError } = useParameters();
 
-  useEffect(() => { isPanicked().then(setPanicked).catch(() => setPanicked(false)); }, []);
+  const refreshVoteState = async () => {
+    try {
+      const signer = await getSigner();
+      if (!signer) return;
+      const addr = await signer.getAddress();
+      const v = await getUserVote(proposalId, addr);
+      setUserVote(v);
+    } catch (e) {
+      console.warn('No se pudo obtener voto del usuario:', e.message);
+    }
+  };
+
+  useEffect(() => { refreshVoteState(); }, [proposalId]);
 
   const handleVote = async (voteType) => {
     setError(''); setSuccess(''); setLoading(true);
     try {
-      const voteValue = voteType === 'FOR' ? true : false;
-      const receipt = await vote(proposalId, voteValue);
+      const support = voteType === 'FOR';
+      const receipt = await vote(proposalId, support);
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Voto registrado! Hash: ${txHash}`);
-      setHasVoted(true); setUserVote(voteType);
-    } catch (e) { setError(`❌ Error: ${e.message}`); } finally { setLoading(false); }
+      await refreshVoteState();
+    } catch (e) {
+      setError(`❌ Error: ${e.message}`);
+    } finally { setLoading(false); }
   };
 
   const handleChangeVote = async (newVoteType) => {
     setError(''); setSuccess(''); setLoading(true);
     try {
-      const voteValue = newVoteType === 'FOR' ? true : false;
-      const receipt = await changeVote(proposalId, voteValue);
+      const support = newVoteType === 'FOR';
+      const receipt = await changeVote(proposalId, support);
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Voto actualizado! Hash: ${txHash}`);
-      setUserVote(newVoteType);
-    } catch (e) { setError(`❌ Error: ${e.message}`); } finally { setLoading(false); }
+      await refreshVoteState();
+    } catch (e) {
+      setError(`❌ Error: ${e.message}`);
+    } finally { setLoading(false); }
   };
+
+  const hasVoted = userVote !== 'NONE';
 
   if (hasVoted) {
     return (
@@ -58,8 +74,8 @@ export default function VotingPanel({ proposalId }) {
       {paramsLoading && <p style={{ fontSize: '0.75em', color: '#666' }}>Cargando parámetros...</p>}
       {params && <p style={{ fontSize: '0.75em', color: '#666', marginTop: '-4px' }}>Mínimo stake para votar: {params.minStakeVoting} tokens</p>}
       <div className="vote-buttons">
-        <button className="btn btn-success" onClick={() => handleVote('FOR')} disabled={loading || panicked}>✅ Votar A Favor</button>
-        <button className="btn btn-danger" onClick={() => handleVote('AGAINST')} disabled={loading || panicked}>❌ Votar En Contra</button>
+        <button className="btn btn-success" onClick={() => handleVote('FOR')} disabled={loading}>✅ Votar A Favor</button>
+        <button className="btn btn-danger" onClick={() => handleVote('AGAINST')} disabled={loading}>❌ Votar En Contra</button>
       </div>
     </div>
   );

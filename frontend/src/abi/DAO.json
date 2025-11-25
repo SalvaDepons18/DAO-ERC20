@@ -1,6 +1,6 @@
 {
   "abi": [
-    {"inputs":[{"internalType":"address","name":"_owner","type":"address"},{"internalType":"address","name":"_token","type":"address"},{"internalType":"address","name":"_staking","type":""},{"internalType":"address","name":"_proposalManager","type":"address"},{"internalType":"address","name":"_strategyManager","type":"address"},{"internalType":"address","name":"_parameters","type":"address"},{"internalType":"address","name":"_panicManager","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+    {"inputs":[{"internalType":"address","name":"_owner","type":"address"},{"internalType":"address","name":"_token","type":"address"},{"internalType":"address","name":"_staking","type":"address"},{"internalType":"address","name":"_proposalManager","type":"address"},{"internalType":"address","name":"_strategyManager","type":"address"},{"internalType":"address","name":"_parameters","type":"address"},{"internalType":"address","name":"_panicManager","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
     {"inputs":[],"name":"buyTokens","outputs":[],"stateMutability":"payable","type":"function"},
     {"inputs":[{"internalType":"address","name":"_newStrategy","type":"address"}],"name":"changeStrategy","outputs":[],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint256","name":"_proposalId","type":"uint256"},{"internalType":"bool","name":"_support","type":"bool"}],"name":"changeVote","outputs":[],"stateMutability":"nonpayable","type":"function"},
@@ -14,6 +14,7 @@
     {"inputs":[],"name":"getProposalDuration","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"uint256","name":"_proposalId","type":"uint256"}],"name":"getProposalResults","outputs":[{"internalType":"uint256","name":"votesFor","type":"uint256"},{"internalType":"uint256","name":"votesAgainst","type":"uint256"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"uint256","name":"_proposalId","type":"uint256"}],"name":"getProposalState","outputs":[{"internalType":"enum IProposalManager.ProposalState","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
+    {"inputs":[],"name":"getProposalCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getProposingStake","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
     {"inputs":[],"name":"getStakingLockTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"address","name":"_owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"getTokenAllowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
@@ -23,6 +24,7 @@
     {"inputs":[],"name":"getTotalVotingStaked","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"uint256","name":"_proposalId","type":"uint256"},{"internalType":"address","name":"_voter","type":"address"}],"name":"getUserVote","outputs":[{"internalType":"enum IProposalManager.VoteType","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getVotingStake","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+    {"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getVotingPower","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"uint256","name":"_proposalId","type":"uint256"}],"name":"hasProposalDeadlinePassed","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
     {"inputs":[{"internalType":"uint256","name":"_proposalId","type":"uint256"},{"internalType":"address","name":"_voter","type":"address"}],"name":"hasUserVoted","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
     {"inputs":[],"name":"isPanicked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},

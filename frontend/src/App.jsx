@@ -11,6 +11,14 @@ import {
   getProposalManagerContract,
   getSigner
 } from "./services/web3Service";
+import { 
+  getVotingPower,
+  getProposalCount,
+  getProposalState,
+  getSigner,
+  isPanicked
+} from "./services/web3Service";
+import PanicBanner from './components/PanicBanner';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -66,31 +74,23 @@ function App() {
 
       const address = await signer.getAddress();
       
-      // Obtener poder de voto
-      const votingStake = await getVotingStake(address);
-      
-      // Obtener propuestas activas
-      const proposalManager = await getProposalManagerContract(true);
-      const totalProposals = await proposalManager.proposalCount();
-      console.log('📊 Total de propuestas:', totalProposals.toString());
-      
+      // Poder de voto efectivo vía estrategia (facade DAO)
+      const vp = await getVotingPower(address);
+
+      // Contar propuestas activas vía DAO
+      const totalProposals = await getProposalCount();
       let activeCount = 0;
-      const total = parseInt(totalProposals.toString());
-      
-      for (let i = 0; i < total; i++) {
+      for (let i = 0; i < totalProposals; i++) {
         try {
-          const state = await proposalManager.getProposalState(i);
-          const stateNum = Number(state);
-          console.log(`Propuesta ${i}: estado =`, stateNum);
-          if (stateNum === 0) activeCount++; // 0 = ACTIVE
+          const state = await getProposalState(i);
+          if (state === 'ACTIVE') activeCount++;
         } catch (e) {
-          console.error(`Error leyendo propuesta ${i}:`, e);
+          console.warn('Error leyendo estado de propuesta', i, e.message);
         }
       }
 
-      console.log('✅ Propuestas activas:', activeCount);
       setDashboardData({
-        votingPower: parseFloat(votingStake).toFixed(4),
+        votingPower: vp.toString(),
         activeProposals: activeCount,
         loading: false
       });
@@ -163,7 +163,8 @@ function App() {
               <div className="info-card">
                 <h3>Poder de Voto</h3>
                 <p className="big-number">{dashboardData.votingPower}</p>
-                <p style={{ fontSize: '0.8em', color: '#999' }}>Tokens en staking</p>
+                <p style={{ fontSize: '0.8em', color: '#999' }}>Poder efectivo (estrategia)</p>
+                <PanicBanner />
               </div>
               <div className="info-card">
                 <h3>Propuestas Activas</h3>

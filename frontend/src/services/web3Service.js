@@ -7,7 +7,7 @@ import ShaCoinAbi from "../abi/ShaCoin.json";
 import ParametersAbi from "../abi/Parameters.json";
 import StrategyManagerAbi from "../abi/StrategyManager.json";
 import PanicManagerAbi from "../abi/PanicManager.json";
-import SimpleMajorityStrategyAbi from "../abi/SimpleMajorityStrategy.json";
+import SimpleMajorityStrategyAbi from "../abi/SimpleMajorityStrategy.json"; // may be used elsewhere; voting power now via DAO
 
 let provider;
 let signer;
@@ -34,14 +34,7 @@ const ensureReady = async () => {
   }
 };
 
-const assertNotPanicked = async () => {
-  const panicManager = await getPanicManagerContract(true);
-  try {
-    await panicManager.checkNotPanicked();
-  } catch {
-    throw new Error("DAO en pánico. Acción temporalmente deshabilitada.");
-  }
-};
+// Eliminado assertNotPanicked: la verificación de pánico se hace on-chain vía modifier notInPanic.
 
 /**
  * Inicializar el proveedor y el signer
@@ -211,7 +204,6 @@ export const getSimpleMajorityStrategyContract = async (isReadOnly = true) => {
  */
 export const buyTokens = async (ethAmount) => {
   await ensureReady();
-  await assertNotPanicked();
   const dao = await getDAOContract();
   console.log('Enviando transacción buyTokens...');
   const tx = await dao.buyTokens({
@@ -228,7 +220,6 @@ export const buyTokens = async (ethAmount) => {
  */
 export const createProposal = async (title, description) => {
   await ensureReady();
-  await assertNotPanicked();
   const dao = await getDAOContract();
   const tx = await dao.createProposal(title, description);
   const receipt = await tx.wait();
@@ -240,7 +231,6 @@ export const createProposal = async (title, description) => {
  */
 export const vote = async (proposalId, support) => {
   await ensureReady();
-  await assertNotPanicked();
   const dao = await getDAOContract();
   const tx = await dao.vote(proposalId, support);
   const receipt = await tx.wait();
@@ -252,7 +242,6 @@ export const vote = async (proposalId, support) => {
  */
 export const changeVote = async (proposalId, support) => {
   await ensureReady();
-  await assertNotPanicked();
   const dao = await getDAOContract();
   const tx = await dao.changeVote(proposalId, support);
   const receipt = await tx.wait();
@@ -264,7 +253,6 @@ export const changeVote = async (proposalId, support) => {
  */
 export const stakeForVoting = async (amount) => {
   await ensureReady();
-  await assertNotPanicked();
   const amt = ethers.parseEther(amount.toString());
   const sha = await getShaCoinContract();
   const s = await getSigner();
@@ -284,7 +272,6 @@ export const stakeForVoting = async (amount) => {
  */
 export const stakeForProposing = async (amount) => {
   await ensureReady();
-  await assertNotPanicked();
   const amt = ethers.parseEther(amount.toString());
   const sha = await getShaCoinContract();
   const s = await getSigner();
@@ -378,6 +365,11 @@ export const getProposal = async (proposalId) => {
   return proposal;
 };
 
+export const getProposalCount = async () => {
+  const dao = await getDAOContract(true);
+  return Number(await dao.getProposalCount());
+};
+
 /**
  * Obtener el estado de una propuesta
  */
@@ -405,7 +397,6 @@ export const getProposalResults = async (proposalId) => {
  */
 export const finalizeProposal = async (proposalId) => {
   await ensureReady();
-  await assertNotPanicked();
   const dao = await getDAOContract();
   const tx = await dao.finalizeProposal(proposalId);
   return await tx.wait();
@@ -445,10 +436,22 @@ export const getStakingLockTime = async () => {
 
 export const getVotingPower = async (address) => {
   const dao = await getDAOContract(true);
-  const activeStrategyAddr = await dao.getActiveStrategyAddress();
-  const strat = await getContract(activeStrategyAddr, SimpleMajorityStrategyAbi, true);
-  const vp = await strat.calculateVotingPower(address);
+  const vp = await dao.getVotingPower(address);
   return vp.toString();
+};
+
+// ====== User Vote State (on-chain) ======
+export const getUserVote = async (proposalId, userAddress) => {
+  const dao = await getDAOContract(true);
+  const voteType = await dao.getUserVote(proposalId, userAddress);
+  // Mapping enum to strings consistent with ProposalManager.VoteType
+  const types = ["NONE", "FOR", "AGAINST"];
+  return types[Number(voteType)] || "NONE";
+};
+
+export const hasUserVoted = async (proposalId, userAddress) => {
+  const dao = await getDAOContract(true);
+  return await dao.hasUserVoted(proposalId, userAddress);
 };
 
 // ====== Panic Manager Functions ======
@@ -462,14 +465,4 @@ export const isPanicked = async () => {
 };
 
 // Central helper: which actions are DAO-gated by panic
-export const isDAOAction = (action) => {
-  const daoActions = new Set([
-    'createProposal',
-    'vote',
-    'changeVote',
-    'buyTokens',
-    'finalizeProposal',
-    'expireProposal',
-  ]);
-  return daoActions.has(action);
-};
+// isDAOAction helper ya no necesario; acciones confían en el modifier on-chain.

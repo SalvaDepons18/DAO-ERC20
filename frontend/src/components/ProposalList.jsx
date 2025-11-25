@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import ProposalCard from './ProposalCard';
-import { getProposalManagerContract, getSigner } from '../services/web3Service';
+import { 
+  getSigner,
+  getProposalCount,
+  getProposal,
+  getProposalState,
+  getProposalResults
+} from '../services/web3Service';
 
 export default function ProposalList({ refreshTrigger = 0 }) {
   const [filter, setFilter] = useState('ALL');
@@ -42,31 +48,29 @@ export default function ProposalList({ refreshTrigger = 0 }) {
         console.log('👤 Usuario conectado:', address);
       }
 
-      const proposalManager = await getProposalManagerContract(true);
-      
-      // Obtener el número total de propuestas
-      const totalProposals = await proposalManager.proposalCount();
-      const total = parseInt(totalProposals.toString());
+      // Obtener el número total de propuestas vía DAO facade
+      const total = await getProposalCount();
       console.log('📊 Total de propuestas a cargar:', total);
 
       const loadedProposals = [];
       
       for (let i = 0; i < total; i++) {
         try {
-          const proposal = await proposalManager.getProposal(i);
-          const state = await proposalManager.getProposalState(i);
-          const [votesFor, votesAgainst] = await proposalManager.getProposalResults(i);
-
-          const stateNum = Number(state);
+          const proposal = await getProposal(i);
+          const stateNameEnum = await getProposalState(i); // returns string
+          const { votesFor, votesAgainst } = await getProposalResults(i);
+          // Map string state back to numeric for filtering consistency
+          const enumToNum = { ACTIVE: 0, ACCEPTED: 1, REJECTED: 2, EXPIRED: 3 };
+          const stateNum = enumToNum[stateNameEnum] ?? 0;
           const proposalData = {
             id: i,
             title: proposal.title,
             description: proposal.description,
             proposer: proposal.proposer,
             state: stateNum,
-            stateName: stateNames[stateNum] || 'UNKNOWN',
-            votesFor: parseInt(votesFor.toString()),
-            votesAgainst: parseInt(votesAgainst.toString()),
+            stateName: stateNameEnum,
+            votesFor: parseInt(votesFor),
+            votesAgainst: parseInt(votesAgainst),
             deadline: parseInt(proposal.deadline.toString()) * 1000,
             timestamp: parseInt(proposal.createdAt.toString()) * 1000
           };

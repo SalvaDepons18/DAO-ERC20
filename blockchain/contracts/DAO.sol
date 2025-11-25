@@ -224,6 +224,17 @@ contract DAO {
         return staking.totalVotingStaked();
     }
 
+    /**
+     * @notice Devuelve el poder de voto efectivo de un usuario según la estrategia activa.
+     * @dev Si no hay estrategia activa o la dirección de usuario es cero, retorna 0.
+     */
+    function getVotingPower(address user) external view returns (uint256) {
+        if (user == address(0)) return 0;
+        address strategyAddr = strategyManager.getActiveStrategyAddress();
+        if (strategyAddr == address(0)) return 0;
+        return IVotingStrategy(strategyAddr).calculateVotingPower(user);
+    }
+
     // ===== ProposalManager View Functions =====
 
     function getProposal(uint256 _proposalId) external view returns (IProposalManager.Proposal memory) {
@@ -300,6 +311,10 @@ contract DAO {
 
     function getProposalDuration() external view returns (uint256) {
         return parameters.proposalDuration();
+    }
+
+    function getProposalCount() external view returns (uint256) {
+        return proposalManager.proposalCount();
     }
 
     // ===== Token View Functions =====
