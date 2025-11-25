@@ -94,12 +94,13 @@ contract DAO {
         returns (uint256)
     {
         if (bytes(_title).length == 0 || bytes(_description).length == 0) revert EmptyString();
-        
+
         // Try to set the creator for the mock (if it has the function)
         try IMockProposalManager(address(proposalManager)).setCurrentCreator(msg.sender) {} catch {}
-        
-        uint256 votingPower = staking.getVotingStake(msg.sender);
-        return proposalManager.createProposal(_title, _description, votingPower);
+
+        // Use proposing stake as the power required to create proposals
+        uint256 proposingPower = staking.getProposingStake(msg.sender);
+        return proposalManager.createProposal(_title, _description, proposingPower);
     }
 
     function vote(uint256 _proposalId, bool _support)

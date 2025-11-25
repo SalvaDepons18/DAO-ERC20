@@ -56,6 +56,9 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     // Votantes de cada propuesta: proposalId => voter => voteType
     mapping(uint256 => mapping(address => VoteType)) public votes;
     
+    // Hash de propuestas para prevenir duplicados: keccak256(title, description) => exists
+    mapping(bytes32 => bool) public proposalExists;
+    
     // Total de propuestas
     uint256 public proposalCount;
 
@@ -102,6 +105,7 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     error EmptyDescription();
     error NotVotedYet();
     error DeadlineNotPassed();
+    error DuplicateProposal();
 
     constructor(
         address _votingStrategy,
@@ -135,6 +139,11 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         if (bytes(_title).length == 0) revert EmptyTitle();
         if (bytes(_description).length == 0) revert EmptyDescription();
         if (_votingPower < minVotingPowerToPropose) revert InsufficientVotingPower();
+
+        // Verificar que no exista una propuesta idéntica
+        bytes32 proposalHash = keccak256(abi.encodePacked(_title, _description));
+        if (proposalExists[proposalHash]) revert DuplicateProposal();
+        proposalExists[proposalHash] = true;
 
         uint256 proposalId = proposalCount++;
         uint256 deadline = block.timestamp + defaultProposalDuration;

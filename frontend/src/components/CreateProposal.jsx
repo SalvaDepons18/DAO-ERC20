@@ -28,15 +28,32 @@ export default function CreateProposal({ onTransactionSuccess }) {
       setTitle('');
       setDescription('');
       
-      // Notificar al componente padre
+      // Notificar al componente padre inmediatamente después de la confirmación
       if (onTransactionSuccess) {
-        setTimeout(() => {
-          onTransactionSuccess();
-        }, 1500);
+        onTransactionSuccess();
       }
     } catch (error) {
       console.error('Error creando propuesta:', error);
-      setError(`❌ Error: ${error.message}`);
+      
+      const errorMessage = error.message || error.toString();
+      const errorData = error.data || '';
+      
+      // Error 0x90c0d696 = DuplicateProposal
+      if (errorData.includes('0x90c0d696') || 
+          errorMessage.includes('DuplicateProposal') ||
+          (errorMessage.includes('unknown custom error') && errorData.includes('90c0d696'))) {
+        setError('⚠️ Propuesta ya creada. Ya existe una propuesta idéntica con el mismo título y descripción.');
+      }
+      // Error 0xcabeb655 = InsufficientProposingStake
+      else if (errorData.includes('0xcabeb655') || 
+          errorMessage.includes('InsufficientProposingStake') ||
+          (errorMessage.includes('unknown custom error') && errorData.includes('cabeb655'))) {
+        setError('⚠️ No tienes suficiente stake para proponer. Necesitas mínimo 50 tokens stakeados. Ve a "Staking" → "Staking para Proponer"');
+      } else if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
+        setError(' Transacción rechazada por el usuario.');
+      } else {
+        setError(` Error: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }

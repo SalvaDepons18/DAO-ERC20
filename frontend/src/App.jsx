@@ -53,6 +53,7 @@ function App() {
 
   const loadDashboardData = async () => {
     try {
+      console.log('🔄 Actualizando dashboard...');
       const signer = await getSigner();
       if (!signer) {
         setDashboardData({
@@ -71,6 +72,7 @@ function App() {
       // Obtener propuestas activas
       const proposalManager = await getProposalManagerContract(true);
       const totalProposals = await proposalManager.proposalCount();
+      console.log('📊 Total de propuestas:', totalProposals.toString());
       
       let activeCount = 0;
       const total = parseInt(totalProposals.toString());
@@ -78,12 +80,15 @@ function App() {
       for (let i = 0; i < total; i++) {
         try {
           const state = await proposalManager.getProposalState(i);
-          if (state === 0) activeCount++; // 0 = ACTIVE
+          const stateNum = Number(state);
+          console.log(`Propuesta ${i}: estado =`, stateNum);
+          if (stateNum === 0) activeCount++; // 0 = ACTIVE
         } catch (e) {
-          // ignorar errores
+          console.error(`Error leyendo propuesta ${i}:`, e);
         }
       }
 
+      console.log('✅ Propuestas activas:', activeCount);
       setDashboardData({
         votingPower: parseFloat(votingStake).toFixed(4),
         activeProposals: activeCount,
@@ -100,8 +105,11 @@ function App() {
   };
 
   const handleTransactionSuccess = () => {
-    // Disparar actualización del dashboard
-    setRefreshTrigger(prev => prev + 1);
+    // Disparar actualización del dashboard con un pequeño delay
+    // para asegurar que la blockchain haya procesado el bloque
+    setTimeout(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 500);
   };
 
   return (
@@ -187,7 +195,7 @@ function App() {
 
         {activeSection === 'proposals' && (
           <div className="section">
-            <ProposalList />
+            <ProposalList refreshTrigger={refreshTrigger} />
           </div>
         )}
 

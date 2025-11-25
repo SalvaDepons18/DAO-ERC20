@@ -48,12 +48,15 @@ async function main() {
   console.log("✅ StrategyManager desplegado en:", strategyManagerAddress);
 
   // 6. Desplegar ProposalManager
+  // Constructor: (address votingStrategy, uint256 minVotingPowerToPropose, uint256 defaultProposalDuration)
   console.log("\n📝 Desplegando ProposalManager...");
   const ProposalManager = await ethers.getContractFactory("ProposalManager");
+  const minVotingPowerToPropose = ethers.parseEther("50");
+  const defaultProposalDuration = 259200; // 3 días
   const proposalManager = await ProposalManager.deploy(
-    strategyManagerAddress,
-    parametersAddress,
-    deployer.address
+    simpleMajorityStrategyAddress,
+    minVotingPowerToPropose,
+    defaultProposalDuration
   );
   await proposalManager.waitForDeployment();
   const proposalManagerAddress = proposalManager.target;

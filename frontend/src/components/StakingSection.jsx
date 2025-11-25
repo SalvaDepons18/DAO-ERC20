@@ -99,11 +99,11 @@ export default function StakingSection({ onTransactionSuccess }) {
         setError('Debes aprobar los tokens primero. Haz clic en "1. Aprobar Tokens"');
       } else if (errorMessage.includes('insufficient balance') || 
                  errorMessage.includes('transfer amount exceeds balance')) {
-        setError('❌ No tienes suficientes tokens. Compra más tokens primero.');
+        setError(' No tienes suficientes tokens. Compra más tokens primero.');
       } else if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
-        setError('❌ Transacción rechazada por el usuario.');
+        setError(' Transacción rechazada por el usuario.');
       } else {
-        setError(`❌ Error: ${errorMessage}`);
+        setError(` Error: ${errorMessage}`);
       }
     } finally {
       setLoading(false);
@@ -148,14 +148,14 @@ export default function StakingSection({ onTransactionSuccess }) {
           errorMessage.includes('transfer amount exceeds allowance') ||
           errorData.includes('0xfb8f41b2') ||
           errorMessage.includes('unknown custom error')) {
-        setError('⚠️ Debes aprobar los tokens primero. Haz clic en "1. Aprobar Tokens"');
+        setError(' Debes aprobar los tokens primero. Haz clic en "1. Aprobar Tokens"');
       } else if (errorMessage.includes('insufficient balance') || 
                  errorMessage.includes('transfer amount exceeds balance')) {
-        setError('❌ No tienes suficientes tokens. Compra más tokens primero.');
+        setError(' No tienes suficientes tokens. Compra más tokens primero.');
       } else if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
-        setError('❌ Transacción rechazada por el usuario.');
+        setError(' Transacción rechazada por el usuario.');
       } else {
-        setError(`❌ Error: ${errorMessage}`);
+        setError(` Error: ${errorMessage}`);
       }
     } finally {
       setLoading(false);
@@ -185,7 +185,20 @@ export default function StakingSection({ onTransactionSuccess }) {
       }
     } catch (error) {
       console.error('Error en unstake:', error);
-      setError(`❌ Error: ${error.message}`);
+      
+      const errorMessage = error.message || error.toString();
+      const errorData = error.data || '';
+      
+      // Error 0xf1bc94d2 = StakeLocked
+      if (errorData.includes('0xf1bc94d2') || 
+          errorMessage.includes('StakeLocked') ||
+          (errorMessage.includes('unknown custom error') && errorData.includes('f1bc94d2'))) {
+        setError('⚠️ Tu stake todavía está bloqueado. Debes esperar 7 días desde que hiciste el stake para poder retirarlo.');
+      } else if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
+        setError('❌ Transacción rechazada por el usuario.');
+      } else {
+        setError(`❌ Error: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
