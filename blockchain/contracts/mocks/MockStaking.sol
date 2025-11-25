@@ -18,19 +18,19 @@ contract MockStaking {
         lastAmount = _amount;
     }
 
-    function unstakeFromVoting(uint256 _amount) external {
+    function unstakeFromVoting(uint256 /* _amount */) external {
         lastUser = currentUser != address(0) ? currentUser : msg.sender;
     }
 
-    function unstakeFromProposing(uint256 _amount) external {
+    function unstakeFromProposing(uint256 /* _amount */) external {
         lastUser = currentUser != address(0) ? currentUser : msg.sender;
     }
 
-    function getVotingStake(address _user) external pure returns (uint256) {
+    function getVotingStake(address /* _user */) external pure returns (uint256) {
         return 0;
     }
 
-    function getProposingStake(address _user) external pure returns (uint256) {
+    function getProposingStake(address /* _user */) external pure returns (uint256) {
         return 0;
     }
     

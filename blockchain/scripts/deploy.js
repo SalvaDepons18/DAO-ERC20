@@ -188,6 +188,18 @@ async function main() {
   Object.entries(addresses).forEach(([key, value]) => {
     console.log(`${key.padEnd(25)}: ${value}`);
   });
+  
+  console.log("\n📋 Variables de entorno para .env.local:");
+  console.log("=====================================");
+  console.log(`VITE_DAO_ADDRESS=${daoAddress}`);
+  console.log(`VITE_SHA_COIN_ADDRESS=${shaCoindAddress}`);
+  console.log(`VITE_PARAMETERS_ADDRESS=${parametersAddress}`);
+  console.log(`VITE_STAKING_ADDRESS=${stakingAddress}`);
+  console.log(`VITE_PROPOSAL_MANAGER_ADDRESS=${proposalManagerAddress}`);
+  console.log(`VITE_STRATEGY_MANAGER_ADDRESS=${strategyManagerAddress}`);
+  console.log(`VITE_SIMPLE_MAJORITY_STRATEGY_ADDRESS=${simpleMajorityStrategyAddress}`);
+  console.log(`VITE_PANIC_MANAGER_ADDRESS=${panicManagerAddress}`);
+  
   console.log("\n⚙️  Parámetros configurados:");
   console.log(`Precio del token:              ${ethers.formatEther(tokenPrice)} ETH`);
   console.log(`Tokens por poder de voto:      ${ethers.formatEther(tokensPerVotingPower)}`);

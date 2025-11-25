@@ -81,6 +81,19 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
         emit StakedForVoting(msg.sender, amount, newLock);
     }
 
+    function stakeForVotingFrom(address user, uint256 amount) external nonReentrant {
+        if (amount == 0) revert InvalidAmount();
+
+        token.transferFrom(msg.sender, address(this), amount);
+        votingStake[user] += amount;
+        totalVotingStaked += amount;
+
+        uint256 newLock = block.timestamp + votingLock;
+        lockedUntilVoting[user] = newLock;
+
+        emit StakedForVoting(user, amount, newLock);
+    }
+
     function stakeForProposing(uint256 amount) external nonReentrant {
         if (amount == 0) revert InvalidAmount();
 
@@ -92,6 +105,19 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
         lockedUntilProposing[msg.sender] = newLock;
 
         emit StakedForProposing(msg.sender, amount, newLock);
+    }
+
+    function stakeForProposingFrom(address user, uint256 amount) external nonReentrant {
+        if (amount == 0) revert InvalidAmount();
+
+        token.transferFrom(msg.sender, address(this), amount);
+        proposalStake[user] += amount;
+        totalProposalStaked += amount;
+
+        uint256 newLock = block.timestamp + proposingLock;
+        lockedUntilProposing[user] = newLock;
+
+        emit StakedForProposing(user, amount, newLock);
     }
 
     // -------------------------------------------------------------------------

@@ -6,8 +6,10 @@ import {
   unstakeProposing,
   getVotingStake,
   getProposingStake,
-  getSigner
+  getSigner,
+  approveTokens
 } from '../services/web3Service';
+import { CONTRACT_ADDRESSES } from '../config/contracts';
 
 export default function StakingSection({ onTransactionSuccess }) {
   const [votingStake, setVotingStake] = useState('');
@@ -18,6 +20,7 @@ export default function StakingSection({ onTransactionSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [approving, setApproving] = useState(false);
 
   useEffect(() => {
     loadStakes();
@@ -36,6 +39,22 @@ export default function StakingSection({ onTransactionSuccess }) {
       setCurrentProposingStake(proposingAmount);
     } catch (error) {
       console.error('Error cargando stakes:', error);
+    }
+  };
+
+  const handleApprove = async (amount) => {
+    setError('');
+    setSuccess('');
+    setApproving(true);
+    try {
+      console.log('Aprobando', amount, 'tokens al DAO...');
+      await approveTokens(CONTRACT_ADDRESSES.dao, amount);
+      setSuccess(`✅ Tokens aprobados! Ahora puedes hacer stake.`);
+    } catch (error) {
+      console.error('Error aprobando tokens:', error);
+      setError(`❌ Error al aprobar: ${error.message}`);
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -165,13 +184,26 @@ export default function StakingSection({ onTransactionSuccess }) {
               onChange={(e) => setVotingStake(e.target.value)}
               placeholder="Cantidad de tokens"
               min="0"
-              disabled={loading}
+              disabled={loading || approving}
               required
             />
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Procesando...' : 'Stake para Votar'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                onClick={() => handleApprove(votingStake)}
+                disabled={loading || approving || !votingStake || parseFloat(votingStake) <= 0}
+              >
+                {approving ? 'Aprobando...' : '1. Aprobar Tokens'}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={loading || approving}>
+                {loading ? 'Procesando...' : '2. Stake para Votar'}
+              </button>
+            </div>
           </form>
+          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>
+            ℹ️ Mínimo: 10 tokens
+          </p>
           <div className="current-stake">
             <p>Stake actual: <strong>{currentVotingStake} SHA</strong></p>
             {parseFloat(currentVotingStake) > 0 && (
@@ -196,13 +228,26 @@ export default function StakingSection({ onTransactionSuccess }) {
               onChange={(e) => setProposingStake(e.target.value)}
               placeholder="Cantidad de tokens"
               min="0"
-              disabled={loading}
+              disabled={loading || approving}
               required
             />
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? 'Procesando...' : 'Stake para Proponer'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                onClick={() => handleApprove(proposingStake)}
+                disabled={loading || approving || !proposingStake || parseFloat(proposingStake) <= 0}
+              >
+                {approving ? 'Aprobando...' : '1. Aprobar Tokens'}
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={loading || approving}>
+                {loading ? 'Procesando...' : '2. Stake para Proponer'}
+              </button>
+            </div>
           </form>
+          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>
+            ℹ️ Mínimo: 50 tokens
+          </p>
           <div className="current-stake">
             <p>Stake actual: <strong>{currentProposingStake} SHA</strong></p>
             {parseFloat(currentProposingStake) > 0 && (

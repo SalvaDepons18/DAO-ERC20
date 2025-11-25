@@ -119,36 +119,46 @@ contract DAO {
 
     function stakeForVoting(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
-        token.burn(msg.sender, _amount);
+        
+        // User must approve DAO to spend tokens
+        // DAO transfers tokens from user to itself, then approves Staking to take them
+        token.transferFrom(msg.sender, address(this), _amount);
+        token.approve(address(staking), _amount);
         
         // Try to set the user for the mock (if it has the function)
         try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
         
-        staking.stakeForVoting(_amount);
+        staking.stakeForVotingFrom(msg.sender, _amount);
     }
 
     function stakeForProposing(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
-        token.burn(msg.sender, _amount);
+        
+        // User must approve DAO to spend tokens
+        // DAO transfers tokens from user to itself, then approves Staking to take them
+        token.transferFrom(msg.sender, address(this), _amount);
+        token.approve(address(staking), _amount);
         
         // Try to set the user for the mock (if it has the function)
         try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
         
-        staking.stakeForProposing(_amount);
+        staking.stakeForProposingFrom(msg.sender, _amount);
     }
 
     function unstakeVoting() external notInPanic {
         // Try to set the user for the mock (if it has the function)
         try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
         
-        staking.unstakeFromVoting(0);
+        uint256 userStake = staking.getVotingStake(msg.sender);
+        staking.unstakeFromVoting(userStake);
     }
 
     function unstakeProposing() external notInPanic {
         // Try to set the user for the mock (if it has the function)
         try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
         
-        staking.unstakeFromProposing(0);
+        uint256 userStake = staking.getProposingStake(msg.sender);
+        staking.unstakeFromProposing(userStake);
     }
 
     function mintTokens(address _to, uint256 _amount) external onlyOwner notInPanic{
