@@ -271,4 +271,58 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
       dao.connect(owner).changeStrategy(user.address)
     ).to.be.reverted;
   });
+
+  // =====================================================
+  //            OWNER — WITHDRAW ETH (fondos)
+  // =====================================================
+
+  it("withdrawETH: owner puede retirar fondos", async () => {
+    // Fondos para el contrato: usuario compra tokens enviando 2 ETH
+    await dao.connect(user).buyTokens({ value: ethers.parseEther("2") });
+
+    const daoBalanceBefore = await ethers.provider.getBalance(dao.target);
+    const userBalanceBefore = await ethers.provider.getBalance(user.address);
+
+    // Owner retira 1 ETH al usuario
+    const tx = await dao.connect(owner).withdrawETH(user.address, ethers.parseEther("1"));
+    await tx.wait();
+
+    const daoBalanceAfter = await ethers.provider.getBalance(dao.target);
+    const userBalanceAfter = await ethers.provider.getBalance(user.address);
+
+    expect(daoBalanceAfter).to.equal(daoBalanceBefore - ethers.parseEther("1"));
+    expect(userBalanceAfter).to.equal(userBalanceBefore + ethers.parseEther("1"));
+  });
+
+  it("withdrawETH: revierte si no owner", async () => {
+    await expect(
+      dao.connect(attacker).withdrawETH(user.address, 1)
+    ).to.be.revertedWithCustomError(dao, "NotOwner");
+  });
+
+  it("withdrawETH: revierte si to = 0", async () => {
+    await expect(
+      dao.connect(owner).withdrawETH(ethers.ZeroAddress, 1)
+    ).to.be.revertedWithCustomError(dao, "InvalidAddress");
+  });
+
+  it("withdrawETH: revierte si amount = 0", async () => {
+    await expect(
+      dao.connect(owner).withdrawETH(user.address, 0)
+    ).to.be.revertedWithCustomError(dao, "ZeroAmount");
+  });
+
+  it("withdrawETH: revierte si balance insuficiente", async () => {
+    // Sin fondos previos
+    await expect(
+      dao.connect(owner).withdrawETH(user.address, ethers.parseEther("1"))
+    ).to.be.revertedWithCustomError(dao, "InsufficientETH");
+  });
+
+  it("withdrawETH: revierte si panic", async () => {
+    await panicManager.setPanic(true);
+    await expect(
+      dao.connect(owner).withdrawETH(user.address, 1)
+    ).to.be.reverted;
+  });
 });

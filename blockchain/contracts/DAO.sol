@@ -26,6 +26,7 @@ contract DAO {
     error ZeroPrice();
     error ZeroAmount();
     error EmptyString();
+    
 
     address public immutable owner;
 
@@ -170,6 +171,20 @@ contract DAO {
     function changeStrategy(address _newStrategy) external onlyOwner notInPanic{
         if (_newStrategy == address(0)) revert InvalidAddress();
         strategyManager.setActiveStrategy(_newStrategy);
+    }
+
+    /**
+     * @notice Retira ETH acumulado por el contrato
+     * @param to Dirección receptora
+     * @param amount Monto en wei a retirar
+     */
+    function withdrawETH(address to, uint256 amount) external onlyOwner notInPanic {
+        if (to == address(0)) revert InvalidAddress();
+        if (amount == 0) revert ZeroAmount();
+        if (address(this).balance < amount) revert InsufficientETH();
+
+        (bool ok, ) = payable(to).call{value: amount}("");
+        require(ok, "ETH transfer failed");
     }
 }
 
