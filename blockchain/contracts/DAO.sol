@@ -141,15 +141,14 @@ contract DAO {
         if (_amount == 0) revert ZeroAmount();
         uint256 minStake = parameters.minStakeForVoting();
         if (_amount < minStake) revert MinStakeNotMet();
-        
-        // User must approve DAO to spend tokens
-        // DAO transfers tokens from user to itself, then approves Staking to take them
-        token.transferFrom(msg.sender, address(this), _amount);
-        token.approve(address(staking), _amount);
-        
-        // Try to set the user for the mock (if it has the function)
+        // Single transfer directly to staking (remove double transfer pattern)
+        // User approves DAO; DAO pulls and sends straight to staking
+        token.transferFrom(msg.sender, address(staking), _amount);
+
+        // Inform mock for tests if present
         try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
-        
+
+        // Record stake without additional transfer
         staking.stakeForVotingFrom(msg.sender, _amount);
     }
 
@@ -157,15 +156,10 @@ contract DAO {
         if (_amount == 0) revert ZeroAmount();
         uint256 minStake = parameters.minStakeForProposing();
         if (_amount < minStake) revert MinStakeNotMet();
-        
-        // User must approve DAO to spend tokens
-        // DAO transfers tokens from user to itself, then approves Staking to take them
-        token.transferFrom(msg.sender, address(this), _amount);
-        token.approve(address(staking), _amount);
-        
-        // Try to set the user for the mock (if it has the function)
+        // Single transfer directly to staking
+        token.transferFrom(msg.sender, address(staking), _amount);
+
         try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
-        
         staking.stakeForProposingFrom(msg.sender, _amount);
     }
 

@@ -79,8 +79,6 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
 
     function stakeForVotingFrom(address user, uint256 amount) external nonReentrant {
         if (amount == 0) revert InvalidAmount();
-
-        token.transferFrom(msg.sender, address(this), amount);
         votingStake[user] += amount;
         totalVotingStaked += amount;
 
@@ -105,8 +103,6 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
 
     function stakeForProposingFrom(address user, uint256 amount) external nonReentrant {
         if (amount == 0) revert InvalidAmount();
-
-        token.transferFrom(msg.sender, address(this), amount);
         proposalStake[user] += amount;
         totalProposalStaked += amount;
 
