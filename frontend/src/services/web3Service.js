@@ -226,13 +226,11 @@ export const vote = async (proposalId, support) => {
 };
 
 /**
- * Cambiar voto en una propuesta (usa ProposalManager directamente)
+ * Cambiar voto en una propuesta (vía DAO)
  */
 export const changeVote = async (proposalId, support) => {
-  const proposalManager = await getProposalManagerContract();
-  // Enum IProposalManager.VoteType: NONE=0, FOR=1, AGAINST=2
-  const voteType = support ? 1 : 2;
-  const tx = await proposalManager.changeVote(proposalId, voteType);
+  const dao = await getDAOContract();
+  const tx = await dao.changeVote(proposalId, support);
   const receipt = await tx.wait();
   return receipt;
 };

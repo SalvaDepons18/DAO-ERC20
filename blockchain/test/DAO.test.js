@@ -161,6 +161,28 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
   });
 
   // =====================================================
+  //                    CHANGE VOTE
+  // =====================================================
+
+  it("changeVote: funciona correctamente", async () => {
+    // Primer voto (FOR)
+    await dao.connect(user).vote(888, true);
+    // Cambiar a AGAINST
+    await dao.connect(user).changeVote(888, false);
+
+    expect(await proposalManager.lastChangeProposal()).to.equal(888);
+    expect(await proposalManager.lastChangeUser()).to.equal(user.address);
+    expect(await proposalManager.lastChangeSupport()).to.equal(false);
+  });
+
+  it("changeVote: revierte si panic", async () => {
+    await panicManager.setPanic(true);
+    await expect(
+      dao.connect(user).changeVote(2, true)
+    ).to.be.reverted;
+  });
+
+  // =====================================================
   //                     STAKING
   // =====================================================
 

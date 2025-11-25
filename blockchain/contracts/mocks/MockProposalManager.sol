@@ -15,6 +15,10 @@ contract MockProposalManager {
     uint256 public lastVoteProposal;
     address public lastVoteUser;
     bool public lastSupport;
+
+    uint256 public lastChangeProposal;
+    address public lastChangeUser;
+    bool public lastChangeSupport;
     
     // Variable para almacenar el votante desde fuera (el DAO lo establece)
     address public currentVoter;
@@ -34,6 +38,12 @@ contract MockProposalManager {
         lastVoteProposal = _proposalId;
         lastVoteUser = currentVoter;
         lastSupport = _voteType == IProposalManager.VoteType.FOR;
+    }
+
+    function changeVote(uint256 _proposalId, IProposalManager.VoteType _newVoteType) external {
+        lastChangeProposal = _proposalId;
+        lastChangeUser = currentVoter;
+        lastChangeSupport = _newVoteType == IProposalManager.VoteType.FOR;
     }
     
     // Función que el DAO llama para establecer quién va a votar

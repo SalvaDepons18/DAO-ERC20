@@ -118,6 +118,20 @@ contract DAO {
         proposalManager.vote(_proposalId, voteType);
     }
 
+    function changeVote(uint256 _proposalId, bool _support)
+        external
+        notInPanic
+    {
+        IProposalManager.VoteType newVoteType = _support
+            ? IProposalManager.VoteType.FOR
+            : IProposalManager.VoteType.AGAINST;
+
+        // Try to set the voter for the mock (if it has the function)
+        try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
+
+        proposalManager.changeVote(_proposalId, newVoteType);
+    }
+
     function stakeForVoting(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
         
