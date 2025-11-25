@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { CONTRACT_ADDRESSES } from "../config/contracts";
+import { CONTRACT_ADDRESSES, DEFAULT_CHAIN_ID } from "../config/contracts";
 
 // Importar ABIs
 import DAOAbi from "../abi/DAO.json";
@@ -13,6 +13,37 @@ import SimpleMajorityStrategyAbi from "../abi/SimpleMajorityStrategy.json";
 
 let provider;
 let signer;
+
+// ========= Helpers: Network, Contracts, Panic =========
+
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+
+const ensureReady = async () => {
+  const s = await getSigner();
+  if (!s) throw new Error("Wallet no conectada");
+
+  const net = await (provider || getProvider()).getNetwork();
+  const expected = BigInt(DEFAULT_CHAIN_ID);
+  if (net.chainId !== expected) {
+    throw new Error(`Red inválida: chainId=${net.chainId}, esperado=${expected}`);
+  }
+  // Basic address sanity check
+  const addrs = Object.entries(CONTRACT_ADDRESSES);
+  for (const [k, v] of addrs) {
+    if (!v || v === ZERO_ADDR) {
+      throw new Error(`Dirección de contrato inválida para ${k}`);
+    }
+  }
+};
+
+const assertNotPanicked = async () => {
+  const panicManager = await getPanicManagerContract(true);
+  try {
+    await panicManager.checkNotPanicked();
+  } catch {
+    throw new Error("DAO en pánico. Acción temporalmente deshabilitada.");
+  }
+};
 
 /**
  * Inicializar el proveedor y el signer
@@ -194,6 +225,8 @@ export const getSimpleMajorityStrategyContract = async (isReadOnly = true) => {
  * Comprar tokens
  */
 export const buyTokens = async (ethAmount) => {
+  await ensureReady();
+  await assertNotPanicked();
   const dao = await getDAOContract();
   console.log('Enviando transacción buyTokens...');
   const tx = await dao.buyTokens({
@@ -209,6 +242,8 @@ export const buyTokens = async (ethAmount) => {
  * Crear una propuesta
  */
 export const createProposal = async (title, description) => {
+  await ensureReady();
+  await assertNotPanicked();
   const dao = await getDAOContract();
   const tx = await dao.createProposal(title, description);
   const receipt = await tx.wait();
@@ -219,6 +254,8 @@ export const createProposal = async (title, description) => {
  * Votar en una propuesta
  */
 export const vote = async (proposalId, support) => {
+  await ensureReady();
+  await assertNotPanicked();
   const dao = await getDAOContract();
   const tx = await dao.vote(proposalId, support);
   const receipt = await tx.wait();
@@ -229,6 +266,8 @@ export const vote = async (proposalId, support) => {
  * Cambiar voto en una propuesta (vía DAO)
  */
 export const changeVote = async (proposalId, support) => {
+  await ensureReady();
+  await assertNotPanicked();
   const dao = await getDAOContract();
   const tx = await dao.changeVote(proposalId, support);
   const receipt = await tx.wait();
@@ -239,40 +278,61 @@ export const changeVote = async (proposalId, support) => {
  * Hacer stake para votar
  */
 export const stakeForVoting = async (amount) => {
-  const dao = await getDAOContract();
-  const tx = await dao.stakeForVoting(ethers.parseEther(amount.toString()));
-  const receipt = await tx.wait();
-  return receipt;
+  await ensureReady();
+  const amt = ethers.parseEther(amount.toString());
+  const [sha, staking, s] = [await getShaCoinContract(), await getStakingContract(), await getSigner()];
+  const owner = await s.getAddress();
+  const allowance = await sha.allowance(owner, CONTRACT_ADDRESSES.staking);
+  if (allowance < amt) {
+    const txA = await sha.approve(CONTRACT_ADDRESSES.staking, amt);
+    await txA.wait();
+  }
+  const tx = await staking.stakeForVoting(amt);
+  return await tx.wait();
 };
 
 /**
  * Hacer stake para proponer
  */
 export const stakeForProposing = async (amount) => {
-  const dao = await getDAOContract();
-  const tx = await dao.stakeForProposing(ethers.parseEther(amount.toString()));
-  const receipt = await tx.wait();
-  return receipt;
+  await ensureReady();
+  const amt = ethers.parseEther(amount.toString());
+  const [sha, staking, s] = [await getShaCoinContract(), await getStakingContract(), await getSigner()];
+  const owner = await s.getAddress();
+  const allowance = await sha.allowance(owner, CONTRACT_ADDRESSES.staking);
+  if (allowance < amt) {
+    const txA = await sha.approve(CONTRACT_ADDRESSES.staking, amt);
+    await txA.wait();
+  }
+  const tx = await staking.stakeForProposing(amt);
+  return await tx.wait();
 };
 
 /**
  * Deshacer stake de votación
  */
 export const unstakeVoting = async () => {
-  const dao = await getDAOContract();
-  const tx = await dao.unstakeVoting();
-  const receipt = await tx.wait();
-  return receipt;
+  await ensureReady();
+  const staking = await getStakingContract();
+  // We need user amount; call getVotingStake and pass exact amount
+  const s = await getSigner();
+  const owner = await s.getAddress();
+  const amount = await (await getStakingContract(true)).getVotingStake(owner);
+  const tx = await staking.unstakeFromVoting(amount);
+  return await tx.wait();
 };
 
 /**
  * Deshacer stake de proposición
  */
 export const unstakeProposing = async () => {
-  const dao = await getDAOContract();
-  const tx = await dao.unstakeProposing();
-  const receipt = await tx.wait();
-  return receipt;
+  await ensureReady();
+  const staking = await getStakingContract();
+  const s = await getSigner();
+  const owner = await s.getAddress();
+  const amount = await (await getStakingContract(true)).getProposingStake(owner);
+  const tx = await staking.unstakeFromProposing(amount);
+  return await tx.wait();
 };
 
 // ====== ShaCoin Functions ======
@@ -295,6 +355,7 @@ export const getTokenBalance = async (address) => {
  * Aprobar tokens para uso en otro contrato
  */
 export const approveTokens = async (spenderAddress, amount) => {
+  await ensureReady();
   const shaCoin = await getShaCoinContract();
   const tx = await shaCoin.approve(spenderAddress, ethers.parseEther(amount.toString()));
   const receipt = await tx.wait();
@@ -354,6 +415,26 @@ export const getProposalResults = async (proposalId) => {
   };
 };
 
+/**
+ * Finalizar una propuesta (evalúa resultado) 
+ */
+export const finalizeProposal = async (proposalId, totalVotingPower = 0n) => {
+  await ensureReady();
+  const pm = await getProposalManagerContract();
+  const tx = await pm.finalizeProposal(proposalId, totalVotingPower);
+  return await tx.wait();
+};
+
+/**
+ * Expirar manualmente una propuesta vencida
+ */
+export const expireProposal = async (proposalId) => {
+  await ensureReady();
+  const pm = await getProposalManagerContract();
+  const tx = await pm.expireProposal(proposalId);
+  return await tx.wait();
+};
+
 // ====== Parameters Functions ======
 
 /**
@@ -372,6 +453,16 @@ export const getStakingLockTime = async () => {
   const parameters = await getParametersContract(true);
   const lockTime = await parameters.stakingLockTime();
   return lockTime.toString();
+};
+
+// ====== Voting Power ======
+
+export const getVotingPower = async (address) => {
+  const sm = await getStrategyManagerContract(true);
+  const activeStrategyAddr = await sm.getActiveStrategyAddress();
+  const strat = await getContract(activeStrategyAddr, SimpleMajorityStrategyAbi, true);
+  const vp = await strat.calculateVotingPower(address);
+  return vp.toString();
 };
 
 // ====== Panic Manager Functions ======

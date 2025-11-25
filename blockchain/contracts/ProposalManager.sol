@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/IVotingStrategy.sol";
 import "./interfaces/IStrategyManager.sol";
 import "./interfaces/IParameters.sol";
+// Panic checks are enforced at DAO level only
 
 /**
  * @title Tipos de Voto

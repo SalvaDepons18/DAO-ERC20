@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { vote, changeVote } from '../services/web3Service';
+import { useState, useEffect } from 'react';
+import { vote, changeVote, isPanicked } from '../services/web3Service';
 
 export default function VotingPanel({ proposalId }) {
   const [hasVoted, setHasVoted] = useState(false);
@@ -7,6 +7,11 @@ export default function VotingPanel({ proposalId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [panicked, setPanicked] = useState(false);
+
+  useEffect(() => {
+    isPanicked().then(setPanicked).catch(() => setPanicked(false));
+  }, []);
 
   const handleVote = async (voteType) => {
     setError('');
@@ -89,14 +94,14 @@ export default function VotingPanel({ proposalId }) {
         <button 
           className="btn btn-success"
           onClick={() => handleVote('FOR')}
-          disabled={loading}
+          disabled={loading || panicked}
         >
           ✅ Votar A Favor
         </button>
         <button 
           className="btn btn-danger"
           onClick={() => handleVote('AGAINST')}
-          disabled={loading}
+          disabled={loading || panicked}
         >
           ❌ Votar En Contra
         </button>

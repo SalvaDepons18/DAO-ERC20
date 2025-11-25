@@ -7,7 +7,9 @@ import {
   getVotingStake,
   getProposingStake,
   getSigner,
-  approveTokens
+  approveTokens,
+  getVotingPower,
+  isPanicked
 } from '../services/web3Service';
 import { CONTRACT_ADDRESSES } from '../config/contracts';
 
@@ -21,6 +23,8 @@ export default function StakingSection({ onTransactionSuccess }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [approving, setApproving] = useState(false);
+  const [votingPower, setVotingPower] = useState('0');
+  const [panicked, setPanicked] = useState(false);
 
   useEffect(() => {
     loadStakes();
@@ -34,9 +38,13 @@ export default function StakingSection({ onTransactionSuccess }) {
       const address = await signer.getAddress();
       const votingAmount = await getVotingStake(address);
       const proposingAmount = await getProposingStake(address);
+      const vp = await getVotingPower(address);
+      const p = await isPanicked();
       
       setCurrentVotingStake(votingAmount);
       setCurrentProposingStake(proposingAmount);
+      setVotingPower(vp.toString());
+      setPanicked(p);
     } catch (error) {
       console.error('Error cargando stakes:', error);
     }
@@ -47,8 +55,8 @@ export default function StakingSection({ onTransactionSuccess }) {
     setSuccess('');
     setApproving(true);
     try {
-      console.log('Aprobando', amount, 'tokens al DAO...');
-      await approveTokens(CONTRACT_ADDRESSES.dao, amount);
+      console.log('Aprobando', amount, 'tokens al Staking...');
+      await approveTokens(CONTRACT_ADDRESSES.staking, amount);
       setSuccess(`✅ Tokens aprobados! Ahora puedes hacer stake.`);
     } catch (error) {
       console.error('Error aprobando tokens:', error);
@@ -235,7 +243,7 @@ export default function StakingSection({ onTransactionSuccess }) {
               onChange={(e) => setVotingStake(e.target.value)}
               placeholder="Cantidad de tokens"
               min="0"
-              disabled={loading || approving}
+              disabled={loading || approving || panicked}
               required
             />
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -243,11 +251,11 @@ export default function StakingSection({ onTransactionSuccess }) {
                 type="button" 
                 className="btn btn-secondary" 
                 onClick={() => handleApprove(votingStake)}
-                disabled={loading || approving || !votingStake || parseFloat(votingStake) <= 0}
+                disabled={loading || approving || !votingStake || parseFloat(votingStake) <= 0 || panicked}
               >
-                {approving ? 'Aprobando...' : '1. Aprobar Tokens'}
+                {approving ? 'Aprobando...' : '1. Aprobar Tokens (Staking)'}
               </button>
-              <button type="submit" className="btn btn-primary" disabled={loading || approving}>
+              <button type="submit" className="btn btn-primary" disabled={loading || approving || panicked}>
                 {loading ? 'Procesando...' : '2. Stake para Votar'}
               </button>
             </div>
@@ -255,13 +263,16 @@ export default function StakingSection({ onTransactionSuccess }) {
           <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>
             ℹ️ Mínimo: 10 tokens
           </p>
+          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '4px' }}>
+            🗳️ Poder de voto actual: <strong>{votingPower}</strong>
+          </p>
           <div className="current-stake">
             <p>Stake actual: <strong>{currentVotingStake} SHA</strong></p>
             {parseFloat(currentVotingStake) > 0 && (
               <button 
                 className="btn btn-secondary" 
                 onClick={() => handleUnstake('voting')}
-                disabled={loading}
+                disabled={loading || panicked}
               >
                 Retirar Stake
               </button>
@@ -279,7 +290,7 @@ export default function StakingSection({ onTransactionSuccess }) {
               onChange={(e) => setProposingStake(e.target.value)}
               placeholder="Cantidad de tokens"
               min="0"
-              disabled={loading || approving}
+              disabled={loading || approving || panicked}
               required
             />
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -287,11 +298,11 @@ export default function StakingSection({ onTransactionSuccess }) {
                 type="button" 
                 className="btn btn-secondary" 
                 onClick={() => handleApprove(proposingStake)}
-                disabled={loading || approving || !proposingStake || parseFloat(proposingStake) <= 0}
+                disabled={loading || approving || !proposingStake || parseFloat(proposingStake) <= 0 || panicked}
               >
                 {approving ? 'Aprobando...' : '1. Aprobar Tokens'}
               </button>
-              <button type="submit" className="btn btn-primary" disabled={loading || approving}>
+              <button type="submit" className="btn btn-primary" disabled={loading || approving || panicked}>
                 {loading ? 'Procesando...' : '2. Stake para Proponer'}
               </button>
             </div>
@@ -305,7 +316,7 @@ export default function StakingSection({ onTransactionSuccess }) {
               <button 
                 className="btn btn-secondary" 
                 onClick={() => handleUnstake('proposing')}
-                disabled={loading}
+                disabled={loading || panicked}
               >
                 Retirar Stake
               </button>

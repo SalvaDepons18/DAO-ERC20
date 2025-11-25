@@ -105,6 +105,25 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "oldValue",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "ProposingLockUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "internalType": "address",
           "name": "user",
@@ -187,6 +206,25 @@
         }
       ],
       "name": "UnstakedVoting",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "oldValue",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "VotingLockUpdated",
       "type": "event"
     },
     {
@@ -347,7 +385,7 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "newLock",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -360,7 +398,7 @@
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "newLock",
+          "name": "",
           "type": "uint256"
         }
       ],

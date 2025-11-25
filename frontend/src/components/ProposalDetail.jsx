@@ -1,6 +1,15 @@
+import { useState } from 'react';
 import VotingPanel from './VotingPanel';
+import { finalizeProposal, expireProposal, isPanicked } from '../services/web3Service';
 
 export default function ProposalDetail({ proposal, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [panicked, setPanicked] = useState(false);
+
+  // quick check panic state (non-blocking UI init)
+  isPanicked().then(setPanicked).catch(() => setPanicked(false));
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleString('es-ES');
   };
@@ -23,6 +32,35 @@ export default function ProposalDetail({ proposal, onClose }) {
   const forPercentage = totalVotes > 0 ? ((proposal.votesFor / totalVotes) * 100).toFixed(1) : 0;
   const againstPercentage = totalVotes > 0 ? ((proposal.votesAgainst / totalVotes) * 100).toFixed(1) : 0;
 
+  const canExpire = proposal.stateName === 'ACTIVE' && Date.now() > proposal.deadline;
+  const canFinalize = proposal.stateName === 'ACTIVE' && Date.now() <= proposal.deadline;
+
+  const onFinalize = async () => {
+    setError(''); setSuccess(''); setLoading(true);
+    try {
+      const receipt = await finalizeProposal(proposal.id, 0n);
+      const hash = receipt.hash || receipt.transactionHash;
+      setSuccess(`✅ Propuesta finalizada. Tx: ${hash}`);
+    } catch (e) {
+      setError(`❌ Error finalizando: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onExpire = async () => {
+    setError(''); setSuccess(''); setLoading(true);
+    try {
+      const receipt = await expireProposal(proposal.id);
+      const hash = receipt.hash || receipt.transactionHash;
+      setSuccess(`✅ Propuesta expirada. Tx: ${hash}`);
+    } catch (e) {
+      setError(`❌ Error expirando: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -32,6 +70,8 @@ export default function ProposalDetail({ proposal, onClose }) {
         </div>
 
         <div className="modal-body">
+          {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
           <div className="proposal-info">
             <p><strong>Descripción:</strong></p>
             <p>{proposal.description}</p>
@@ -92,6 +132,19 @@ export default function ProposalDetail({ proposal, onClose }) {
               <p className="text-muted">Esta propuesta ya no está activa</p>
             </div>
           )}
+
+          <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+            {canFinalize && (
+              <button className="btn btn-secondary" onClick={onFinalize} disabled={loading || panicked}>
+                Finalizar Propuesta
+              </button>
+            )}
+            {canExpire && (
+              <button className="btn btn-secondary" onClick={onExpire} disabled={loading || panicked}>
+                Expirar Propuesta
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
