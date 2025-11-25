@@ -176,15 +176,12 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     /**
      * @dev Emite un voto en una propuesta
      * @param _voteType Tipo de voto (FOR o AGAINST)
-     * @param _votingWeight Peso del voto (poder de voto del votante)
+     * El peso se calcula internamente usando la estrategia activa
      */
     function vote(
         uint256 _proposalId,
-        VoteType _voteType,
-        uint256 _votingWeight
+        VoteType _voteType
     ) external nonReentrant {
-        if (_votingWeight == 0) revert InvalidVoteType();
-        
         Proposal storage proposal = proposals[_proposalId];
         
         // Validaciones
@@ -193,6 +190,14 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         if (block.timestamp > proposal.deadline) revert ProposalDeadlinePassed();
         if (_voteType == VoteType.NONE) revert InvalidVoteType();
         if (votes[_proposalId][msg.sender] != VoteType.NONE) revert AlreadyVoted();
+
+        // Calcular peso de voto usando la estrategia activa
+        IVotingStrategy active = address(strategyManager) != address(0)
+            ? strategyManager.getActiveStrategy()
+            : votingStrategy;
+        
+        uint256 _votingWeight = active.calculateVotingPower(msg.sender);
+        if (_votingWeight == 0) revert InvalidVoteType();
 
         // Registrar voto
         votes[_proposalId][msg.sender] = _voteType;
@@ -211,15 +216,12 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
      * @dev Permite cambiar el voto de un usuario (si aún está en fase ACTIVE)
      * @param _proposalId ID de la propuesta
      * @param _newVoteType Nuevo tipo de voto
-     * @param _votingWeight Peso del voto del votante
+     * El peso se calcula internamente usando la estrategia activa
      */
     function changeVote(
         uint256 _proposalId,
-        VoteType _newVoteType,
-        uint256 _votingWeight
+        VoteType _newVoteType
     ) external nonReentrant {
-        if (_votingWeight == 0) revert InvalidVoteType();
-        
         Proposal storage proposal = proposals[_proposalId];
         
         // Validaciones
@@ -230,6 +232,14 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
 
         VoteType currentVote = votes[_proposalId][msg.sender];
         if (currentVote == VoteType.NONE) revert NotVotedYet();
+
+        // Calcular peso de voto usando la estrategia activa
+        IVotingStrategy active = address(strategyManager) != address(0)
+            ? strategyManager.getActiveStrategy()
+            : votingStrategy;
+        
+        uint256 _votingWeight = active.calculateVotingPower(msg.sender);
+        if (_votingWeight == 0) revert InvalidVoteType();
 
         // Restar voto anterior
         if (currentVote == VoteType.FOR) {

@@ -30,7 +30,7 @@ contract MockProposalManager {
         return nextId++;
     }
 
-    function vote(uint256 _proposalId, IProposalManager.VoteType _voteType, uint256 /* _votingWeight */) external {
+    function vote(uint256 _proposalId, IProposalManager.VoteType _voteType) external {
         lastVoteProposal = _proposalId;
         lastVoteUser = currentVoter;
         lastSupport = _voteType == IProposalManager.VoteType.FOR;

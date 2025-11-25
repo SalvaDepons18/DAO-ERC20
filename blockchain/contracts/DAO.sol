@@ -107,7 +107,6 @@ contract DAO {
         external
         notInPanic
     {
-        uint256 votingWeight = staking.getVotingStake(msg.sender);
         IProposalManager.VoteType voteType = _support 
             ? IProposalManager.VoteType.FOR 
             : IProposalManager.VoteType.AGAINST;
@@ -115,7 +114,7 @@ contract DAO {
         // Try to set the voter for the mock (if it has the function)
         try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
         
-        proposalManager.vote(_proposalId, voteType, votingWeight);
+        proposalManager.vote(_proposalId, voteType);
     }
 
     function stakeForVoting(uint256 _amount) external notInPanic {

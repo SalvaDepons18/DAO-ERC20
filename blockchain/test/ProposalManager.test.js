@@ -19,7 +19,7 @@ describe("ProposalManager", function () {
   let ProposalManager, proposalManager;
   let votingStrategy;
   let owner, proposer, voter1, voter2, voter3;
-  let dummyToken, dummyParams;
+  let dummyToken, dummyParams, staking;
 
   const PROPOSAL_DURATION = 86400; // 1 día
   const MIN_VOTING_POWER = 100;
@@ -28,7 +28,7 @@ describe("ProposalManager", function () {
   beforeEach(async () => {
     [owner, proposer, voter1, voter2, voter3] = await ethers.getSigners();
 
-    // Deploy contratos dummy para los argumentos requeridos
+    // Deploy ShaCoin (token real ERC20)
     const DummyToken = await ethers.getContractFactory("ShaCoin");
     dummyToken = await DummyToken.deploy(owner.address);
     await dummyToken.waitForDeployment();
@@ -37,9 +37,17 @@ describe("ProposalManager", function () {
     dummyParams = await DummyParams.deploy(owner.address);
     await dummyParams.waitForDeployment();
 
+    // Configurar tokensPerVotingPower = 1 token = 1 voto
+    await dummyParams.setTokensPerVotingPower(ethers.parseEther("1"));
+
+    // Deploy Staking
+    const Staking = await ethers.getContractFactory("Staking");
+    staking = await Staking.deploy(dummyToken.target, dummyParams.target);
+    await staking.waitForDeployment();
+
     // Deploy estrategia de votación simple para testing
     const SimpleMajority = await ethers.getContractFactory("SimpleMajorityStrategy");
-    votingStrategy = await SimpleMajority.deploy(dummyToken.target, dummyParams.target);
+    votingStrategy = await SimpleMajority.deploy(staking.target, dummyParams.target);
     await votingStrategy.waitForDeployment();
 
     // Deploy ProposalManager
@@ -50,6 +58,25 @@ describe("ProposalManager", function () {
       PROPOSAL_DURATION
     );
     await proposalManager.waitForDeployment();
+
+    // Mint y stake tokens para los votantes
+    // voter1 = 6000 tokens
+    await dummyToken.mint(voter1.address, ethers.parseEther("6000"));
+    await dummyToken.connect(voter1).approve(staking.target, ethers.parseEther("6000"));
+    await staking.connect(voter1).stakeForVoting(ethers.parseEther("6000"));
+
+    // voter2 = 3000 tokens
+    await dummyToken.mint(voter2.address, ethers.parseEther("3000"));
+    await dummyToken.connect(voter2).approve(staking.target, ethers.parseEther("3000"));
+    await staking.connect(voter2).stakeForVoting(ethers.parseEther("3000"));
+
+    // voter3 = 1000 tokens
+    await dummyToken.mint(voter3.address, ethers.parseEther("1000"));
+    await dummyToken.connect(voter3).approve(staking.target, ethers.parseEther("1000"));
+    await staking.connect(voter3).stakeForVoting(ethers.parseEther("1000"));
+
+    // proposer = MIN_VOTING_POWER tokens
+    await dummyToken.mint(proposer.address, ethers.parseEther("100"));
   });
 
   // -------------------------------------------------------------------------
@@ -135,13 +162,12 @@ describe("ProposalManager", function () {
       MIN_VOTING_POWER
     );
 
-    const votingWeight = 1000;
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, votingWeight);
+      .vote(0, VoteType.FOR);
 
     const [votesFor, votesAgainst] = await proposalManager.getProposalResults(0);
-    expect(votesFor).to.equal(votingWeight);
+    expect(votesFor).to.equal(6000);
     expect(votesAgainst).to.equal(0);
   });
 
@@ -152,27 +178,16 @@ describe("ProposalManager", function () {
       MIN_VOTING_POWER
     );
 
-    const votingWeight = 1000;
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.FOR, votingWeight)
+        .vote(0, VoteType.FOR)
     )
       .to.emit(proposalManager, "VoteCasted")
-      .withArgs(0, voter1.address, VoteType.FOR, votingWeight);
+      .withArgs(0, voter1.address, VoteType.FOR, 6000);
   });
 
-  it("Debe rechazar voto con peso 0", async () => {
-    await proposalManager.connect(proposer).createProposal(
-      "Test Proposal",
-      "Description",
-      MIN_VOTING_POWER
-    );
-
-    await expect(
-      proposalManager.connect(voter1).vote(0, VoteType.FOR, 0)
-    ).to.be.revertedWithCustomError(proposalManager, "InvalidVoteType");
-  });
+  // Test eliminado: El peso ahora se calcula internamente, no se puede pasar 0
 
   it("Debe rechazar voto de tipo NONE", async () => {
     await proposalManager.connect(proposer).createProposal(
@@ -182,7 +197,7 @@ describe("ProposalManager", function () {
     );
 
     await expect(
-      proposalManager.connect(voter1).vote(0, VoteType.NONE, 1000)
+      proposalManager.connect(voter1).vote(0, VoteType.NONE)
     ).to.be.revertedWithCustomError(proposalManager, "InvalidVoteType");
   });
 
@@ -195,12 +210,12 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, 1000);
+      .vote(0, VoteType.FOR);
 
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.AGAINST, 500)
+        .vote(0, VoteType.AGAINST)
     ).to.be.revertedWithCustomError(proposalManager, "AlreadyVoted");
   });
 
@@ -211,21 +226,19 @@ describe("ProposalManager", function () {
       MIN_VOTING_POWER
     );
 
-    const votingWeight = 1000;
-
     // Primer voto: FOR
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, votingWeight);
+      .vote(0, VoteType.FOR);
 
     // Cambiar a AGAINST
     await proposalManager
       .connect(voter1)
-      .changeVote(0, VoteType.AGAINST, votingWeight);
+      .changeVote(0, VoteType.AGAINST);
 
     const [votesFor, votesAgainst] = await proposalManager.getProposalResults(0);
     expect(votesFor).to.equal(0);
-    expect(votesAgainst).to.equal(votingWeight);
+    expect(votesAgainst).to.equal(6000);
   });
 
   it("Debe rechazar voto después del deadline", async () => {
@@ -242,7 +255,7 @@ describe("ProposalManager", function () {
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.FOR, 1000)
+        .vote(0, VoteType.FOR)
     ).to.be.revertedWithCustomError(proposalManager, "ProposalDeadlinePassed");
   });
 
@@ -259,7 +272,7 @@ describe("ProposalManager", function () {
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.FOR, 1000)
+        .vote(0, VoteType.FOR)
     ).to.be.revertedWithCustomError(proposalManager, "ProposalNotActive");
   });
 
@@ -277,15 +290,15 @@ describe("ProposalManager", function () {
     // Votos a favor
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, 6000);
+      .vote(0, VoteType.FOR);
     await proposalManager
       .connect(voter2)
-      .vote(0, VoteType.FOR, 2000);
+      .vote(0, VoteType.FOR);
 
     // Votos en contra
     await proposalManager
       .connect(voter3)
-      .vote(0, VoteType.AGAINST, 1000);
+      .vote(0, VoteType.AGAINST);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 
@@ -300,18 +313,18 @@ describe("ProposalManager", function () {
       MIN_VOTING_POWER
     );
 
-    // Votos a favor
-    await proposalManager
-      .connect(voter1)
-      .vote(0, VoteType.FOR, 4000);
-
-    // Votos en contra
+    // voter2 vota a favor (3000)
     await proposalManager
       .connect(voter2)
-      .vote(0, VoteType.AGAINST, 5000);
+      .vote(0, VoteType.FOR);
+
+    // voter1 y voter3 votan en contra (6000 + 1000 = 7000)
+    await proposalManager
+      .connect(voter1)
+      .vote(0, VoteType.AGAINST);
     await proposalManager
       .connect(voter3)
-      .vote(0, VoteType.AGAINST, 1000);
+      .vote(0, VoteType.AGAINST);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 
@@ -362,7 +375,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, 6000);
+      .vote(0, VoteType.FOR);
 
     await expect(proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER))
       .to.emit(proposalManager, "ProposalStateChanged")
@@ -382,7 +395,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, 1000);
+      .vote(0, VoteType.FOR);
 
     expect(await proposalManager.hasUserVoted(0, voter1.address)).to.be.true;
     expect(await proposalManager.hasUserVoted(0, voter2.address)).to.be.false;
@@ -397,7 +410,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, 1000);
+      .vote(0, VoteType.FOR);
 
     expect(await proposalManager.getUserVote(0, voter1.address)).to.equal(
       VoteType.FOR
@@ -431,7 +444,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR, 6000);
+      .vote(0, VoteType.FOR);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 
@@ -586,8 +599,8 @@ describe("ProposalManager", function () {
     );
 
     // Votar con mayoría a favor
-    await proposalManager.connect(voter1).vote(0, VoteType.FOR, 6000);
-    await proposalManager.connect(voter2).vote(0, VoteType.AGAINST, 3000);
+    await proposalManager.connect(voter1).vote(0, VoteType.FOR);
+    await proposalManager.connect(voter2).vote(0, VoteType.AGAINST);
 
     // Cambiar estrategia a una más restrictiva (aunque con SimpleMajority no cambia lógica real,
     // pero verificamos que usa la del manager)
@@ -611,7 +624,7 @@ describe("ProposalManager", function () {
       MIN_VOTING_POWER
     );
 
-    await proposalManager.connect(voter1).vote(0, VoteType.FOR, 6000);
+    await proposalManager.connect(voter1).vote(0, VoteType.FOR);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 

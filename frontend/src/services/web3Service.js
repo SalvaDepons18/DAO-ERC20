@@ -226,6 +226,18 @@ export const vote = async (proposalId, support) => {
 };
 
 /**
+ * Cambiar voto en una propuesta (usa ProposalManager directamente)
+ */
+export const changeVote = async (proposalId, support) => {
+  const proposalManager = await getProposalManagerContract();
+  // Enum IProposalManager.VoteType: NONE=0, FOR=1, AGAINST=2
+  const voteType = support ? 1 : 2;
+  const tx = await proposalManager.changeVote(proposalId, voteType);
+  const receipt = await tx.wait();
+  return receipt;
+};
+
+/**
  * Hacer stake para votar
  */
 export const stakeForVoting = async (amount) => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { vote } from '../services/web3Service';
+import { vote, changeVote } from '../services/web3Service';
 
 export default function VotingPanel({ proposalId }) {
   const [hasVoted, setHasVoted] = useState(false);
@@ -37,7 +37,7 @@ export default function VotingPanel({ proposalId }) {
     try {
       console.log('Cambiando voto a', newVoteType);
       const voteValue = newVoteType === 'FOR' ? true : false;
-      const receipt = await vote(proposalId, voteValue);
+      const receipt = await changeVote(proposalId, voteValue);
       
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Voto actualizado! Hash: ${txHash}`);

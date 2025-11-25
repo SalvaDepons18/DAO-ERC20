@@ -254,11 +254,6 @@
           "internalType": "enum IProposalManager.VoteType",
           "name": "_newVoteType",
           "type": "uint8"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_votingWeight",
-          "type": "uint256"
         }
       ],
       "name": "changeVote",
@@ -721,11 +716,6 @@
           "internalType": "enum IProposalManager.VoteType",
           "name": "_voteType",
           "type": "uint8"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_votingWeight",
-          "type": "uint256"
         }
       ],
       "name": "vote",
