@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./interfaces/IVotingStrategy.sol";
-import "./Parameteres.sol";
+import "./Parameters.sol";
 import "./interfaces/IStaking.sol";
 
 

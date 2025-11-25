@@ -17,7 +17,7 @@ async function main() {
 
   // 2. Desplegar Parameters
   console.log("\n📝 Desplegando Parameters...");
-  const Parameters = await ethers.getContractFactory("Parameteres");
+  const Parameters = await ethers.getContractFactory("Parameters");
   const parameters = await Parameters.deploy(deployer.address);
   await parameters.waitForDeployment();
   const parametersAddress = parameters.target;
@@ -42,7 +42,7 @@ async function main() {
   // 5. Desplegar StrategyManager
   console.log("\n📝 Desplegando StrategyManager...");
   const StrategyManager = await ethers.getContractFactory("StrategyManager");
-  const strategyManager = await StrategyManager.deploy(simpleMajorityStrategyAddress, deployer.address);
+  const strategyManager = await StrategyManager.deploy(simpleMajorityStrategyAddress);
   await strategyManager.waitForDeployment();
   const strategyManagerAddress = strategyManager.target;
   console.log("✅ StrategyManager desplegado en:", strategyManagerAddress);
@@ -109,7 +109,7 @@ async function main() {
   const contracts = {
     DAO: "DAO.sol/DAO.json",
     ShaCoin: "ShaCoin.sol/ShaCoin.json",
-    Parameters: "Parameteres.sol/Parameteres.json",
+    Parameters: "Parameters.sol/Parameters.json",
     Staking: "Staking.sol/Staking.json",
     ProposalManager: "ProposalManager.sol/ProposalManager.json",
     StrategyManager: "StrategyManager.sol/StrategyManager.json",

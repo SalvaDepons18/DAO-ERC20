@@ -19,12 +19,56 @@ let signer;
  */
 export const initWeb3 = async () => {
   if (typeof window.ethereum !== "undefined") {
-    provider = new ethers.BrowserProvider(window.ethereum);
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    signer = await provider.getSigner();
-    return signer;
+    try {
+      // Solicitar conexión a MetaMask
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      
+      // Verificar y cambiar a la red Hardhat si es necesario
+      try {
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        // Hardhat usa chainId 0x7a69 (31337 en decimal)
+        if (chainId !== '0x7a69') {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x7a69' }],
+            });
+          } catch (switchError) {
+            // Si la red no está agregada, agregarla
+            if (switchError.code === 4902) {
+              await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [
+                  {
+                    chainId: '0x7a69',
+                    rpcUrls: ['http://127.0.0.1:8545/'],
+                    chainName: 'Hardhat',
+                    nativeCurrency: {
+                      name: 'ETH',
+                      symbol: 'ETH',
+                      decimals: 18,
+                    },
+                  },
+                ],
+              });
+            } else {
+              throw switchError;
+            }
+          }
+        }
+      } catch (chainError) {
+        console.warn('Error al cambiar red:', chainError);
+      }
+
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      return signer;
+    } catch (error) {
+      console.error('Error en initWeb3:', error);
+      throw error;
+    }
   } else {
     throw new Error("MetaMask o similar no está instalado");
   }
