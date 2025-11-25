@@ -79,7 +79,9 @@ contract DAO {
         if (_price == 0) revert ZeroPrice();
         if (msg.value < _price) revert InsufficientETH();
 
-        uint256 _amount = msg.value / _price;
+        // Calculate amount: (msg.value * 10^18) / price
+        // This ensures we get tokens with 18 decimals
+        uint256 _amount = (msg.value * 1e18) / _price;
         if (_amount == 0) revert ZeroAmount();
 
         token.mint(msg.sender, _amount);
