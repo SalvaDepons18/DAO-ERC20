@@ -160,6 +160,36 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
     ).to.be.reverted;
   });
 
+  it("stakeForVoting: revierte si amount < minStakeForVoting", async () => {
+    // Setear mínimo a 100
+    await parameters.setMinStakeForVoting(100);
+    await expect(
+      dao.connect(user).stakeForVoting(50)
+    ).to.be.revertedWithCustomError(dao, "MinStakeNotMet");
+  });
+
+  it("stakeForProposing: revierte si amount < minStakeForProposing", async () => {
+    await parameters.setMinStakeForProposing(200);
+    await expect(
+      dao.connect(user).stakeForProposing(150)
+    ).to.be.revertedWithCustomError(dao, "MinStakeNotMet");
+  });
+
+  it("createProposal: revierte si proposingStake < minStakeForProposing", async () => {
+    await parameters.setMinStakeForProposing(1);
+    await expect(
+      dao.connect(user).createProposal("Titulo", "Desc")
+    ).to.be.revertedWithCustomError(dao, "MinStakeNotMet");
+  });
+
+  it("vote: revierte si votingStake < minStakeForVoting", async () => {
+    // MockStaking.getVotingStake retorna 0; seteamos mínimo > 0
+    await parameters.setMinStakeForVoting(1);
+    await expect(
+      dao.connect(user).vote(777, true)
+    ).to.be.revertedWithCustomError(dao, "MinStakeNotMet");
+  });
+
   // =====================================================
   //                    CHANGE VOTE
   // =====================================================

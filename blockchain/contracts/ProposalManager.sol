@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/IVotingStrategy.sol";
 import "./interfaces/IStrategyManager.sol";
+import "./interfaces/IParameters.sol";
 
 /**
  * @title Tipos de Voto
@@ -53,6 +54,8 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     IVotingStrategy public votingStrategy;
     // StrategyManager central (si está enlazado se usa su activeStrategy siempre)
     IStrategyManager public strategyManager;
+    // Parámetros de gobernanza (opcional, para leer duración dinámica)
+    IParameters public parametersContract;
     
     // Propuestas mapeadas por ID
     mapping(uint256 => Proposal) public proposals;
@@ -151,7 +154,14 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         proposalExists[proposalHash] = true;
 
         uint256 proposalId = proposalCount++;
-        uint256 deadline = block.timestamp + defaultProposalDuration;
+        uint256 duration = defaultProposalDuration;
+        if (address(parametersContract) != address(0)) {
+            uint256 pd = parametersContract.proposalDuration();
+            if (pd != 0) {
+                duration = pd;
+            }
+        }
+        uint256 deadline = block.timestamp + duration;
 
         proposals[proposalId] = Proposal({
             title: _title,
@@ -438,5 +448,13 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     function setDefaultProposalDuration(uint256 _newDuration) external onlyOwner {
         if (_newDuration == 0) revert InvalidDuration();
         defaultProposalDuration = _newDuration;
+    }
+
+    /**
+     * @dev Setea el contrato de parámetros para leer duración dinámica
+     */
+    function setParameters(address _parameters) external onlyOwner {
+        if (_parameters == address(0)) revert InvalidVotingStrategy();
+        parametersContract = IParameters(_parameters);
     }
 }

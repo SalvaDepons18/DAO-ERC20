@@ -68,6 +68,11 @@ async function main() {
   await txLink.wait();
   console.log("  ✅ StrategyManager enlazado");
 
+  console.log("🔗 Seteando Parameters en ProposalManager...");
+  const txSetParams = await proposalManager.setParameters(parametersAddress);
+  await txSetParams.wait();
+  console.log("  ✅ Parameters enlazado en ProposalManager");
+
   // 7. Desplegar PanicManager
   console.log("\n📝 Desplegando PanicManager...");
   const PanicManager = await ethers.getContractFactory("PanicManager");

@@ -3,6 +3,12 @@ pragma solidity ^0.8.20;
 
 contract MockParameters {
     uint256 public tokenPriceValue = 1 ether;
+    // Governance params defaults (simple mock)
+    uint256 public tokensPerVotingPower;
+    uint256 public minStakeForVoting;
+    uint256 public minStakeForProposing;
+    uint256 public stakingLockTime;
+    uint256 public proposalDuration;
 
     function setTokenPriceValue(uint256 p) external {
         tokenPriceValue = p;
@@ -16,4 +22,9 @@ contract MockParameters {
     function tokenPrice() external view returns (uint256) {
         return tokenPriceValue;
     }
+
+    // Simple setters for tests
+    function setMinStakeForVoting(uint256 v) external { minStakeForVoting = v; }
+    function setMinStakeForProposing(uint256 v) external { minStakeForProposing = v; }
+
 }

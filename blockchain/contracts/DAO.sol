@@ -26,6 +26,7 @@ contract DAO {
     error ZeroPrice();
     error ZeroAmount();
     error EmptyString();
+    error MinStakeNotMet();
     
 
     address public immutable owner;
@@ -100,14 +101,18 @@ contract DAO {
         try IMockProposalManager(address(proposalManager)).setCurrentCreator(msg.sender) {} catch {}
 
         // Use proposing stake as the power required to create proposals
-        uint256 proposingPower = staking.getProposingStake(msg.sender);
-        return proposalManager.createProposal(_title, _description, proposingPower);
+        uint256 proposingStake = staking.getProposingStake(msg.sender);
+        uint256 minPropose = parameters.minStakeForProposing();
+        if (proposingStake < minPropose) revert MinStakeNotMet();
+        return proposalManager.createProposal(_title, _description, proposingStake);
     }
 
     function vote(uint256 _proposalId, bool _support)
         external
         notInPanic
     {
+        uint256 minStake = parameters.minStakeForVoting();
+        if (staking.getVotingStake(msg.sender) < minStake) revert MinStakeNotMet();
         IProposalManager.VoteType voteType = _support 
             ? IProposalManager.VoteType.FOR 
             : IProposalManager.VoteType.AGAINST;
@@ -134,6 +139,8 @@ contract DAO {
 
     function stakeForVoting(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
+        uint256 minStake = parameters.minStakeForVoting();
+        if (_amount < minStake) revert MinStakeNotMet();
         
         // User must approve DAO to spend tokens
         // DAO transfers tokens from user to itself, then approves Staking to take them
@@ -148,6 +155,8 @@ contract DAO {
 
     function stakeForProposing(uint256 _amount) external notInPanic {
         if (_amount == 0) revert ZeroAmount();
+        uint256 minStake = parameters.minStakeForProposing();
+        if (_amount < minStake) revert MinStakeNotMet();
         
         // User must approve DAO to spend tokens
         // DAO transfers tokens from user to itself, then approves Staking to take them

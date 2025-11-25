@@ -151,6 +151,23 @@ describe("ProposalManager", function () {
       .to.emit(proposalManager, "ProposalCreated");
   });
 
+  it("Debe usar proposalDuration de Parameters si está seteado", async () => {
+    // Linkear Parameters al ProposalManager y setear duración corta
+    await proposalManager.setParameters(dummyParams.target);
+    await dummyParams.setProposalDuration(123);
+
+    const tx = await proposalManager.connect(proposer).createProposal(
+      "Deadline Param Test",
+      "Desc",
+      MIN_VOTING_POWER
+    );
+    const receipt = await tx.wait();
+    const block = await ethers.provider.getBlock(receipt.blockNumber);
+
+    const proposal = await proposalManager.getProposal(0);
+    expect(proposal.deadline).to.equal(block.timestamp + 123);
+  });
+
   // -------------------------------------------------------------------------
   // Votación
   // -------------------------------------------------------------------------
