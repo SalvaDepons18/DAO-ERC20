@@ -560,6 +560,45 @@ html, body, #root {
   text-shadow: var(--text-shadow-dark);
 }
 
+/* Messages */
+.error-message {
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  background: linear-gradient(to bottom, #8b3a3a 0%, #6b1a1a 100%);
+  border: 3px solid #5a1a1a;
+  color: #ffe0e0;
+  font-weight: 600;
+  box-shadow: inset 0 2px 0 rgba(255, 100, 100, 0.3), 0 4px 0 var(--brown-darker), 0 6px 12px rgba(0, 0, 0, 0.5);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: 'Cinzel', serif;
+  position: relative;
+}
+
+.error-message::before {
+  content: '⚠';
+  margin-right: 0.5rem;
+  font-size: 1.2em;
+}
+
+.success-message {
+  padding: 1rem 1.5rem;
+  margin: 1rem 0;
+  background: linear-gradient(to bottom, #4a7c59 0%, #2a5c39 100%);
+  border: 3px solid #2a4c29;
+  color: #e0f0e0;
+  font-weight: 600;
+  box-shadow: inset 0 2px 0 rgba(144, 238, 144, 0.3), 0 4px 0 var(--brown-darker), 0 6px 12px rgba(0, 0, 0, 0.5);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  font-family: 'Cinzel', serif;
+  position: relative;
+}
+
+.success-message::before {
+  content: '✓';
+  margin-right: 0.5rem;
+  font-size: 1.2em;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .app-main { padding: 1.5rem; }

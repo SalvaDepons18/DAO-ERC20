@@ -85,7 +85,26 @@ export default function StakingSection({ onTransactionSuccess }) {
       }
     } catch (error) {
       console.error('Error en stake voting:', error);
-      setError(`❌ Error: ${error.message}`);
+      
+      // Detectar errores comunes y mostrar mensajes amigables
+      const errorMessage = error.message || error.toString();
+      const errorData = error.data || '';
+      
+      // Error de aprobación insuficiente (custom error 0xfb8f41b2 = ERC20InsufficientAllowance)
+      if (errorMessage.includes('insufficient allowance') || 
+          errorMessage.includes('ERC20: insufficient allowance') ||
+          errorMessage.includes('transfer amount exceeds allowance') ||
+          errorData.includes('0xfb8f41b2') ||
+          errorMessage.includes('unknown custom error')) {
+        setError('Debes aprobar los tokens primero. Haz clic en "1. Aprobar Tokens"');
+      } else if (errorMessage.includes('insufficient balance') || 
+                 errorMessage.includes('transfer amount exceeds balance')) {
+        setError('❌ No tienes suficientes tokens. Compra más tokens primero.');
+      } else if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
+        setError('❌ Transacción rechazada por el usuario.');
+      } else {
+        setError(`❌ Error: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -118,7 +137,26 @@ export default function StakingSection({ onTransactionSuccess }) {
       }
     } catch (error) {
       console.error('Error en stake proposing:', error);
-      setError(`❌ Error: ${error.message}`);
+      
+      // Detectar errores comunes y mostrar mensajes amigables
+      const errorMessage = error.message || error.toString();
+      const errorData = error.data || '';
+      
+      // Error de aprobación insuficiente (custom error 0xfb8f41b2 = ERC20InsufficientAllowance)
+      if (errorMessage.includes('insufficient allowance') || 
+          errorMessage.includes('ERC20: insufficient allowance') ||
+          errorMessage.includes('transfer amount exceeds allowance') ||
+          errorData.includes('0xfb8f41b2') ||
+          errorMessage.includes('unknown custom error')) {
+        setError('⚠️ Debes aprobar los tokens primero. Haz clic en "1. Aprobar Tokens"');
+      } else if (errorMessage.includes('insufficient balance') || 
+                 errorMessage.includes('transfer amount exceeds balance')) {
+        setError('❌ No tienes suficientes tokens. Compra más tokens primero.');
+      } else if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
+        setError('❌ Transacción rechazada por el usuario.');
+      } else {
+        setError(`❌ Error: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
