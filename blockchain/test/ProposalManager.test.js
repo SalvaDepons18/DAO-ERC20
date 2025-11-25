@@ -509,4 +509,115 @@ describe("ProposalManager", function () {
       proposalManager.setDefaultProposalDuration(0)
     ).to.be.revertedWithCustomError(proposalManager, "InvalidDuration");
   });
+
+  // -------------------------------------------------------------------------
+  // StrategyManager Integration (Nueva funcionalidad)
+  // -------------------------------------------------------------------------
+
+  it("Debe permitir enlazar un StrategyManager", async () => {
+    // Deploy un StrategyManager real
+    const StrategyManager = await ethers.getContractFactory("StrategyManager");
+    const strategyManager = await StrategyManager.deploy(votingStrategy.target);
+    await strategyManager.waitForDeployment();
+
+    await expect(proposalManager.linkStrategyManager(strategyManager.target))
+      .to.emit(proposalManager, "StrategyManagerLinked")
+      .withArgs(ethers.ZeroAddress, strategyManager.target);
+  });
+
+  it("Debe rechazar enlazar StrategyManager con dirección cero", async () => {
+    await expect(
+      proposalManager.linkStrategyManager(ethers.ZeroAddress)
+    ).to.be.revertedWithCustomError(proposalManager, "InvalidVotingStrategy");
+  });
+
+  it("Solo owner puede enlazar StrategyManager", async () => {
+    const StrategyManager = await ethers.getContractFactory("StrategyManager");
+    const strategyManager = await StrategyManager.deploy(votingStrategy.target);
+    await strategyManager.waitForDeployment();
+
+    await expect(
+      proposalManager.connect(voter1).linkStrategyManager(strategyManager.target)
+    ).to.be.reverted;
+  });
+
+  it("getActiveVotingStrategyAddress debe retornar votingStrategy si no hay manager", async () => {
+    const activeAddress = await proposalManager.getActiveVotingStrategyAddress();
+    expect(activeAddress).to.equal(votingStrategy.target);
+  });
+
+  it("getActiveVotingStrategyAddress debe retornar estrategia de StrategyManager si está enlazado", async () => {
+    // Deploy estrategia alternativa
+    const AltStrategy = await ethers.getContractFactory("SimpleMajorityStrategy");
+    const altStrategy = await AltStrategy.deploy(dummyToken.target, dummyParams.target);
+    await altStrategy.waitForDeployment();
+
+    // Deploy StrategyManager con estrategia alternativa
+    const StrategyManager = await ethers.getContractFactory("StrategyManager");
+    const strategyManager = await StrategyManager.deploy(altStrategy.target);
+    await strategyManager.waitForDeployment();
+
+    // Enlazar
+    await proposalManager.linkStrategyManager(strategyManager.target);
+
+    const activeAddress = await proposalManager.getActiveVotingStrategyAddress();
+    expect(activeAddress).to.equal(altStrategy.target);
+  });
+
+  it("Debe usar estrategia dinámica del StrategyManager al finalizar propuesta", async () => {
+    // Deploy estrategia alternativa que rechaza todo (votesFor debe ser > votesAgainst * 10)
+    const RejectingStrategy = await ethers.getContractFactory("SimpleMajorityStrategy");
+    const rejectingStrategy = await RejectingStrategy.deploy(dummyToken.target, dummyParams.target);
+    await rejectingStrategy.waitForDeployment();
+
+    // Deploy StrategyManager con estrategia original (acepta si votesFor > votesAgainst)
+    const StrategyManager = await ethers.getContractFactory("StrategyManager");
+    const strategyManager = await StrategyManager.deploy(votingStrategy.target);
+    await strategyManager.waitForDeployment();
+
+    // Enlazar StrategyManager
+    await proposalManager.linkStrategyManager(strategyManager.target);
+
+    // Crear propuesta
+    await proposalManager.connect(proposer).createProposal(
+      "Dynamic Strategy Test",
+      "Testing strategy change",
+      MIN_VOTING_POWER
+    );
+
+    // Votar con mayoría a favor
+    await proposalManager.connect(voter1).vote(0, VoteType.FOR, 6000);
+    await proposalManager.connect(voter2).vote(0, VoteType.AGAINST, 3000);
+
+    // Cambiar estrategia a una más restrictiva (aunque con SimpleMajority no cambia lógica real,
+    // pero verificamos que usa la del manager)
+    await strategyManager.setActiveStrategy(rejectingStrategy.target);
+
+    // Finalizar - debe usar la estrategia del manager
+    await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+
+    const proposal = await proposalManager.getProposal(0);
+    // Con SimpleMajorityStrategy, 6000 > 3000 => ACCEPTED
+    expect(proposal.state).to.equal(ProposalState.ACCEPTED);
+    // Verificar que usó la estrategia del manager (rejectingStrategy)
+    expect(proposal.strategyUsed).to.equal(rejectingStrategy.target);
+  });
+
+  it("Debe seguir usando votingStrategy si no hay StrategyManager enlazado", async () => {
+    // Crear propuesta sin enlazar StrategyManager
+    await proposalManager.connect(proposer).createProposal(
+      "Fallback Strategy Test",
+      "Testing fallback to votingStrategy",
+      MIN_VOTING_POWER
+    );
+
+    await proposalManager.connect(voter1).vote(0, VoteType.FOR, 6000);
+
+    await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+
+    const proposal = await proposalManager.getProposal(0);
+    expect(proposal.state).to.equal(ProposalState.ACCEPTED);
+    // Debe haber usado la estrategia original (votingStrategy)
+    expect(proposal.strategyUsed).to.equal(votingStrategy.target);
+  });
 });

@@ -31,6 +31,8 @@ interface IProposalManager {
     function getProposalState(uint256 _proposalId) external view returns (ProposalState);
     function hasProposalDeadlinePassed(uint256 _proposalId) external view returns (bool);
     function setVotingStrategy(address _newVotingStrategy) external;
+    function linkStrategyManager(address _strategyManager) external;
+    function getActiveVotingStrategyAddress() external view returns (address);
     function setMinVotingPowerToPropose(uint256 _newMinVotingPower) external;
     function setDefaultProposalDuration(uint256 _newDuration) external;
 }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/IVotingStrategy.sol";
+import "./interfaces/IStrategyManager.sol";
 
 /**
  * @title Tipos de Voto
@@ -48,7 +49,10 @@ import "./interfaces/IProposalManager.sol";
 
 contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
 
+    // Estrategia histórica (fallback si no se enlaza StrategyManager)
     IVotingStrategy public votingStrategy;
+    // StrategyManager central (si está enlazado se usa su activeStrategy siempre)
+    IStrategyManager public strategyManager;
     
     // Propuestas mapeadas por ID
     mapping(uint256 => Proposal) public proposals;
@@ -90,6 +94,7 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     );
 
     event VotingStrategyUpdated(address oldAddress, address newAddress);
+    event StrategyManagerLinked(address oldManager, address newManager);
 
     // Errores
     error ProposalNotFound();
@@ -260,19 +265,21 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     ) external nonReentrant {
         Proposal storage proposal = proposals[_proposalId];
 
-        // Validaciones
         if (proposal.createdAt == 0) revert ProposalNotFound();
         if (proposal.state != ProposalState.ACTIVE) revert ProposalNotActive();
 
-        // Verificar si ha vencido
         if (block.timestamp > proposal.deadline) {
             proposal.state = ProposalState.EXPIRED;
             emit ProposalStateChanged(_proposalId, ProposalState.ACTIVE, ProposalState.EXPIRED);
             return;
         }
 
-        // Evaluar resultado usando la estrategia
-        bool accepted = votingStrategy.isProposalAccepted(
+        // Obtener estrategia activa: si hay StrategyManager enlazado se usa su activeStrategy, si no fallback a votingStrategy almacenada
+        IVotingStrategy active = address(strategyManager) != address(0)
+            ? strategyManager.getActiveStrategy()
+            : votingStrategy;
+
+        bool accepted = active.isProposalAccepted(
             proposal.votesFor,
             proposal.votesAgainst,
             _totalVotingPower
@@ -280,7 +287,7 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
 
         ProposalState newState = accepted ? ProposalState.ACCEPTED : ProposalState.REJECTED;
         proposal.state = newState;
-        proposal.strategyUsed = address(votingStrategy);
+        proposal.strategyUsed = address(active);
 
         emit ProposalStateChanged(_proposalId, ProposalState.ACTIVE, newState);
     }
@@ -391,6 +398,19 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         if (_newVotingStrategy == address(0)) revert InvalidVotingStrategy();
         emit VotingStrategyUpdated(address(votingStrategy), _newVotingStrategy);
         votingStrategy = IVotingStrategy(_newVotingStrategy);
+    }
+
+    function linkStrategyManager(address _strategyManager) external onlyOwner {
+        if (_strategyManager == address(0)) revert InvalidVotingStrategy();
+        emit StrategyManagerLinked(address(strategyManager), _strategyManager);
+        strategyManager = IStrategyManager(_strategyManager);
+    }
+
+    function getActiveVotingStrategyAddress() external view returns (address) {
+        if (address(strategyManager) != address(0)) {
+            return strategyManager.getActiveStrategyAddress();
+        }
+        return address(votingStrategy);
     }
 
     /**

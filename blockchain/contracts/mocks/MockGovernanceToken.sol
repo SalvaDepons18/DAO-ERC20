@@ -17,4 +17,18 @@ contract MockGovernanceToken {
         lastBurnFrom = _from;
         lastBurnAmount = _amount;
     }
+
+    function transferFrom(address from, address, uint256 amount) external returns (bool) {
+        lastBurnFrom = from;
+        lastBurnAmount = amount;
+        return true;
+    }
+
+    function approve(address, uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function balanceOf(address) external pure returns (uint256) {
+        return 0;
+    }
 }

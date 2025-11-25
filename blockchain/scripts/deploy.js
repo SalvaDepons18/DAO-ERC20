@@ -62,6 +62,12 @@ async function main() {
   const proposalManagerAddress = proposalManager.target;
   console.log("✅ ProposalManager desplegado en:", proposalManagerAddress);
 
+  // Enlazar StrategyManager para estrategia dinámica en tiempo real
+  console.log("\n🔗 Enlazando StrategyManager al ProposalManager...");
+  const txLink = await proposalManager.linkStrategyManager(strategyManagerAddress);
+  await txLink.wait();
+  console.log("  ✅ StrategyManager enlazado");
+
   // 7. Desplegar PanicManager
   console.log("\n📝 Desplegando PanicManager...");
   const PanicManager = await ethers.getContractFactory("PanicManager");

@@ -73,11 +73,10 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
   // =====================================================
 
   it("buyTokens: compra tokens correctamente", async () => {
-    // price = 1 ether, enviamos 1 ether → amount = 1 ether / 1 ether = 1
     await dao.connect(user).buyTokens({ value: ethers.parseEther("1") });
 
     expect(await token.lastMintTo()).to.equal(user.address);
-    expect(await token.lastMintAmount()).to.equal(1n);
+    expect(await token.lastMintAmount()).to.equal(ethers.parseEther("1"));
   });
 
   it("buyTokens: revierte si price = 0", async () => {
