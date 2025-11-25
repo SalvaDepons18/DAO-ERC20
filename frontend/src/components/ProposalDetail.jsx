@@ -12,8 +12,16 @@ export default function ProposalDetail({ proposal, onClose }) {
     
     const days = Math.floor(diff / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
-    return `${days}d ${hours}h restantes`;
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    
+    if (days > 0) return `${days}d ${hours}h restantes`;
+    if (hours > 0) return `${hours}h ${minutes}m restantes`;
+    return `${minutes}m restantes`;
   };
+
+  const totalVotes = proposal.votesFor + proposal.votesAgainst;
+  const forPercentage = totalVotes > 0 ? ((proposal.votesFor / totalVotes) * 100).toFixed(1) : 0;
+  const againstPercentage = totalVotes > 0 ? ((proposal.votesAgainst / totalVotes) * 100).toFixed(1) : 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -30,53 +38,60 @@ export default function ProposalDetail({ proposal, onClose }) {
             
             <div className="info-grid">
               <div>
-                <strong>ID:</strong> #{proposal.id}
+                <strong>ID de Propuesta:</strong> #{proposal.id}
               </div>
               <div>
-                <strong>Estado:</strong> {proposal.state}
+                <strong>Estado:</strong> <span className={`badge ${proposal.stateName?.toLowerCase()}`}>{proposal.stateName}</span>
               </div>
               <div>
                 <strong>Tiempo restante:</strong> {getTimeRemaining(proposal.deadline)}
+              </div>
+              <div>
+                <strong>Creada:</strong> {formatDate(proposal.timestamp)}
+              </div>
+              <div>
+                <strong>Total de votos:</strong> {totalVotes}
               </div>
             </div>
 
             <div className="voting-stats">
               <div className="stat-bar">
                 <div className="bar-label">
-                  <span>A Favor</span>
-                  <span>{proposal.votesFor} votos</span>
+                  <span>✅ A Favor</span>
+                  <span>{proposal.votesFor} votos ({forPercentage}%)</span>
                 </div>
                 <div className="progress-bar">
                   <div 
                     className="progress for" 
-                    style={{ width: `${(proposal.votesFor / (proposal.votesFor + proposal.votesAgainst)) * 100}%` }}
+                    style={{ width: `${forPercentage}%` }}
                   />
                 </div>
               </div>
 
               <div className="stat-bar">
                 <div className="bar-label">
-                  <span>En Contra</span>
-                  <span>{proposal.votesAgainst} votos</span>
+                  <span>❌ En Contra</span>
+                  <span>{proposal.votesAgainst} votos ({againstPercentage}%)</span>
                 </div>
                 <div className="progress-bar">
                   <div 
                     className="progress against" 
-                    style={{ width: `${(proposal.votesAgainst / (proposal.votesFor + proposal.votesAgainst)) * 100}%` }}
+                    style={{ width: `${againstPercentage}%` }}
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {proposal.state === 0 && (
+          {proposal.stateName === 'ACTIVE' && (
             <VotingPanel proposalId={proposal.id} />
           )}
 
-          <div className="voters-section">
-            <h3>Votantes</h3>
-            <p className="text-muted">Aquí se mostrarán los votantes y sus votos</p>
-          </div>
+          {proposal.stateName !== 'ACTIVE' && (
+            <div className="proposal-closed">
+              <p className="text-muted">Esta propuesta ya no está activa</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

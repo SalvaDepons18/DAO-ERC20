@@ -16,7 +16,11 @@ export default function WalletConnect() {
           if (accounts.length > 0) {
             setAccount(accounts[0]);
             // Inicializar web3
-            await initWeb3();
+            try {
+              await initWeb3();
+            } catch (e) {
+              console.warn('Error inicializando web3 en checkConnection:', e);
+            }
           }
         } catch (error) {
           console.error('Error verificando conexión:', error);

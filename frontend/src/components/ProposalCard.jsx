@@ -5,14 +5,27 @@ export default function ProposalCard({ proposal }) {
   const [showDetail, setShowDetail] = useState(false);
 
   const getStateLabel = (state) => {
-    const states = ['Activa', 'Aceptada', 'Rechazada', 'Expirada'];
+    const states = {
+      0: 'Activa',
+      1: 'Aceptada',
+      2: 'Rechazada',
+      3: 'Expirada'
+    };
     return states[state] || 'Desconocido';
   };
 
   const getStateClass = (state) => {
-    const classes = ['active', 'accepted', 'rejected', 'expired'];
+    const classes = {
+      0: 'active',
+      1: 'accepted',
+      2: 'rejected',
+      3: 'expired'
+    };
     return classes[state] || '';
   };
+
+  const totalVotes = proposal.votesFor + proposal.votesAgainst;
+  const forPercentage = totalVotes > 0 ? ((proposal.votesFor / totalVotes) * 100).toFixed(1) : 0;
 
   return (
     <>
@@ -28,12 +41,16 @@ export default function ProposalCard({ proposal }) {
         
         <div className="proposal-stats">
           <div className="stat">
-            <span className="label">A Favor</span>
+            <span className="label">✅ A Favor</span>
             <span className="value">{proposal.votesFor}</span>
           </div>
           <div className="stat">
-            <span className="label">En Contra</span>
+            <span className="label">❌ En Contra</span>
             <span className="value">{proposal.votesAgainst}</span>
+          </div>
+          <div className="stat">
+            <span className="label">% A Favor</span>
+            <span className="value">{forPercentage}%</span>
           </div>
         </div>
 

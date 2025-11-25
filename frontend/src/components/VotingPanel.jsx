@@ -1,31 +1,50 @@
 import { useState } from 'react';
+import { vote } from '../services/web3Service';
 
 export default function VotingPanel({ proposalId }) {
   const [hasVoted, setHasVoted] = useState(false);
   const [userVote, setUserVote] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleVote = async (voteType) => {
+    setError('');
+    setSuccess('');
     setLoading(true);
     try {
       console.log('Votando', voteType, 'en propuesta', proposalId);
-      // TODO: Llamar al contrato
+      // voteType: true para a favor, false para en contra
+      const voteValue = voteType === 'FOR' ? true : false;
+      const receipt = await vote(proposalId, voteValue);
+      
+      const txHash = receipt.hash || receipt.transactionHash;
+      setSuccess(`✅ Voto registrado! Hash: ${txHash}`);
       setHasVoted(true);
       setUserVote(voteType);
     } catch (error) {
       console.error('Error votando:', error);
+      setError(`❌ Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleChangeVote = async (newVoteType) => {
+    setError('');
+    setSuccess('');
     setLoading(true);
     try {
       console.log('Cambiando voto a', newVoteType);
+      const voteValue = newVoteType === 'FOR' ? true : false;
+      const receipt = await vote(proposalId, voteValue);
+      
+      const txHash = receipt.hash || receipt.transactionHash;
+      setSuccess(`✅ Voto actualizado! Hash: ${txHash}`);
       setUserVote(newVoteType);
     } catch (error) {
       console.error('Error cambiando voto:', error);
+      setError(`❌ Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -34,6 +53,9 @@ export default function VotingPanel({ proposalId }) {
   if (hasVoted) {
     return (
       <div className="voting-panel voted">
+        {error && <div className="error-message">{error}</div>}
+        {success && <div className="success-message">{success}</div>}
+        
         <p className="vote-status">
           Ya has votado: <strong>{userVote === 'FOR' ? '✅ A Favor' : '❌ En Contra'}</strong>
         </p>
@@ -59,6 +81,9 @@ export default function VotingPanel({ proposalId }) {
 
   return (
     <div className="voting-panel">
+      {error && <div className="error-message">{error}</div>}
+      {success && <div className="success-message">{success}</div>}
+      
       <h3>Emite tu voto</h3>
       <div className="vote-buttons">
         <button 

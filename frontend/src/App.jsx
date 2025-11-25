@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import WalletConnect from "./components/WalletConnect";
 import TokenBalance from "./components/TokenBalance";
@@ -6,9 +6,103 @@ import BuyTokens from "./components/BuyTokens";
 import StakingSection from "./components/StakingSection";
 import CreateProposal from "./components/CreateProposal";
 import ProposalList from "./components/ProposalList";
+import { 
+  getVotingStake,
+  getProposalManagerContract,
+  getSigner
+} from "./services/web3Service";
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [dashboardData, setDashboardData] = useState({
+    votingPower: '0',
+    activeProposals: 0,
+    loading: true
+  });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    loadDashboardData();
+    // Actualizar cada 10 segundos
+    const interval = setInterval(loadDashboardData, 10000);
+    
+    // Escuchar cambios de cuenta en MetaMask
+    if (window.ethereum) {
+      const handleAccountsChanged = (accounts) => {
+        console.log('Cuenta cambiada:', accounts);
+        setRefreshTrigger(prev => prev + 1);
+      };
+      
+      const handleChainChanged = () => {
+        console.log('Red cambiada');
+        window.location.reload();
+      };
+      
+      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      window.ethereum.on('chainChanged', handleChainChanged);
+      
+      return () => {
+        clearInterval(interval);
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      };
+    }
+    
+    return () => clearInterval(interval);
+  }, [refreshTrigger]);
+
+  const loadDashboardData = async () => {
+    try {
+      const signer = await getSigner();
+      if (!signer) {
+        setDashboardData({
+          votingPower: '0',
+          activeProposals: 0,
+          loading: false
+        });
+        return;
+      }
+
+      const address = await signer.getAddress();
+      
+      // Obtener poder de voto
+      const votingStake = await getVotingStake(address);
+      
+      // Obtener propuestas activas
+      const proposalManager = await getProposalManagerContract(true);
+      const totalProposals = await proposalManager.proposalCount();
+      
+      let activeCount = 0;
+      const total = parseInt(totalProposals.toString());
+      
+      for (let i = 0; i < total; i++) {
+        try {
+          const state = await proposalManager.getProposalState(i);
+          if (state === 0) activeCount++; // 0 = ACTIVE
+        } catch (e) {
+          // ignorar errores
+        }
+      }
+
+      setDashboardData({
+        votingPower: parseFloat(votingStake).toFixed(4),
+        activeProposals: activeCount,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Error cargando datos del dashboard:', error);
+      setDashboardData({
+        votingPower: '0',
+        activeProposals: 0,
+        loading: false
+      });
+    }
+  };
+
+  const handleTransactionSuccess = () => {
+    // Disparar actualización del dashboard
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   return (
     <div className="app">
@@ -57,28 +151,37 @@ function App() {
           <div className="dashboard">
             <h2>Dashboard</h2>
             <div className="cards-grid">
-              <TokenBalance balance="0" />
+              <TokenBalance refreshTrigger={refreshTrigger} />
               <div className="info-card">
                 <h3>Poder de Voto</h3>
-                <p className="big-number">0</p>
+                <p className="big-number">{dashboardData.votingPower}</p>
+                <p style={{ fontSize: '0.8em', color: '#999' }}>Tokens en staking</p>
               </div>
               <div className="info-card">
                 <h3>Propuestas Activas</h3>
-                <p className="big-number">0</p>
+                <p className="big-number">{dashboardData.activeProposals}</p>
               </div>
             </div>
+            <button 
+              className="btn btn-secondary" 
+              onClick={loadDashboardData}
+              disabled={dashboardData.loading}
+              style={{ marginTop: '1rem' }}
+            >
+              {dashboardData.loading ? 'Actualizando...' : 'Actualizar datos'}
+            </button>
           </div>
         )}
 
         {activeSection === 'tokens' && (
           <div className="section">
-            <BuyTokens />
+            <BuyTokens onTransactionSuccess={handleTransactionSuccess} />
           </div>
         )}
 
         {activeSection === 'staking' && (
           <div className="section">
-            <StakingSection />
+            <StakingSection onTransactionSuccess={handleTransactionSuccess} />
           </div>
         )}
 
@@ -90,7 +193,7 @@ function App() {
 
         {activeSection === 'create' && (
           <div className="section">
-            <CreateProposal />
+            <CreateProposal onTransactionSuccess={handleTransactionSuccess} />
           </div>
         )}
       </main>

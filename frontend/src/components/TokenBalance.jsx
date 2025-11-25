@@ -1,11 +1,52 @@
-export default function TokenBalance({ balance, symbol = 'SHA' }) {
+import { useState, useEffect } from 'react';
+import { getTokenBalance, getSigner } from '../services/web3Service';
+
+export default function TokenBalance({ symbol = 'SHA', refreshTrigger = 0 }) {
+  const [balance, setBalance] = useState('0');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    console.log('TokenBalance useEffect triggered, refreshTrigger:', refreshTrigger);
+    loadBalance();
+  }, [refreshTrigger]);
+
+  const loadBalance = async () => {
+    try {
+      setLoading(true);
+      const signer = await getSigner();
+      if (!signer) {
+        console.log('No hay signer disponible');
+        setBalance('0');
+        return;
+      }
+
+      const address = await signer.getAddress();
+      console.log('Cargando balance para dirección:', address);
+      const userBalance = await getTokenBalance(address);
+      console.log('Balance obtenido:', userBalance);
+      setBalance(parseFloat(userBalance).toFixed(4));
+    } catch (error) {
+      console.error('Error cargando balance:', error);
+      setBalance('0');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="token-balance">
       <h3>Tu Balance</h3>
       <div className="balance-amount">
-        <span className="amount">{balance || '0'}</span>
+        <span className="amount">{loading ? '...' : balance}</span>
         <span className="symbol">{symbol}</span>
       </div>
+      <button 
+        className="btn btn-small" 
+        onClick={loadBalance}
+        disabled={loading}
+      >
+        {loading ? 'Actualizando...' : 'Actualizar'}
+      </button>
     </div>
   );
 }

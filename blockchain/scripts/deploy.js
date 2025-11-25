@@ -131,12 +131,70 @@ async function main() {
     }
   }
 
+  // 9. Configurar parámetros iniciales
+  console.log("\n⚙️  Configurando parámetros iniciales...");
+  
+  // Token price: 0.001 ETH por token
+  const tokenPrice = ethers.parseEther("0.001");
+  console.log("  💰 Configurando precio del token:", ethers.formatEther(tokenPrice), "ETH");
+  let tx = await parameters.setTokenPrice(tokenPrice);
+  await tx.wait();
+  console.log("  ✅ Precio del token configurado");
+
+  // Tokens per voting power: 1 token = 1 voto
+  const tokensPerVotingPower = ethers.parseEther("1");
+  console.log("  🗳️  Configurando tokens por poder de voto:", ethers.formatEther(tokensPerVotingPower));
+  tx = await parameters.setTokensPerVotingPower(tokensPerVotingPower);
+  await tx.wait();
+  console.log("  ✅ Tokens por poder de voto configurados");
+
+  // Min stake for voting: 10 tokens
+  const minStakeForVoting = ethers.parseEther("10");
+  console.log("  📊 Configurando stake mínimo para votar:", ethers.formatEther(minStakeForVoting), "tokens");
+  tx = await parameters.setMinStakeForVoting(minStakeForVoting);
+  await tx.wait();
+  console.log("  ✅ Stake mínimo para votar configurado");
+
+  // Min stake for proposing: 50 tokens
+  const minStakeForProposing = ethers.parseEther("50");
+  console.log("  📝 Configurando stake mínimo para proponer:", ethers.formatEther(minStakeForProposing), "tokens");
+  tx = await parameters.setMinStakeForProposing(minStakeForProposing);
+  await tx.wait();
+  console.log("  ✅ Stake mínimo para proponer configurado");
+
+  // Staking lock time: 7 días (604800 segundos)
+  const stakingLockTime = 604800;
+  console.log("  🔒 Configurando tiempo de bloqueo de staking:", stakingLockTime, "segundos (7 días)");
+  tx = await parameters.setStakingLockTime(stakingLockTime);
+  await tx.wait();
+  console.log("  ✅ Tiempo de bloqueo de staking configurado");
+
+  // Proposal duration: 3 días (259200 segundos)
+  const proposalDuration = 259200;
+  console.log("  ⏱️  Configurando duración de propuestas:", proposalDuration, "segundos (3 días)");
+  tx = await parameters.setProposalDuration(proposalDuration);
+  await tx.wait();
+  console.log("  ✅ Duración de propuestas configurada");
+
+  // 10. Transferir ownership de ShaCoin al DAO
+  console.log("\n🔐 Transfiriendo ownership de ShaCoin al DAO...");
+  tx = await shaCoin.transferOwnership(daoAddress);
+  await tx.wait();
+  console.log("  ✅ Ownership transferido al DAO");
+
   console.log("\n✨ Deploy completado exitosamente!");
   console.log("\n📊 Resumen:");
   console.log("=====================================");
   Object.entries(addresses).forEach(([key, value]) => {
     console.log(`${key.padEnd(25)}: ${value}`);
   });
+  console.log("\n⚙️  Parámetros configurados:");
+  console.log(`Precio del token:              ${ethers.formatEther(tokenPrice)} ETH`);
+  console.log(`Tokens por poder de voto:      ${ethers.formatEther(tokensPerVotingPower)}`);
+  console.log(`Stake mínimo para votar:       ${ethers.formatEther(minStakeForVoting)} tokens`);
+  console.log(`Stake mínimo para proponer:    ${ethers.formatEther(minStakeForProposing)} tokens`);
+  console.log(`Tiempo de bloqueo de staking:  ${stakingLockTime} segundos`);
+  console.log(`Duración de propuestas:        ${proposalDuration} segundos`);
 }
 
 main().catch(err => {

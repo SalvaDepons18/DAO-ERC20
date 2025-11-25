@@ -85,78 +85,103 @@ export const getProvider = () => {
 };
 
 /**
- * Obtener el signer actual
+ * Obtener el signer actual - lo reinicializa si es necesario
  */
-export const getSigner = () => {
-  return signer;
+export const getSigner = async () => {
+  if (signer) {
+    return signer;
+  }
+  
+  // Si no hay signer pero hay window.ethereum, intentar recuperarlo
+  if (typeof window.ethereum !== "undefined") {
+    try {
+      const accounts = await window.ethereum.request({
+        method: 'eth_accounts'
+      });
+      
+      if (accounts.length > 0) {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        return signer;
+      }
+    } catch (error) {
+      console.warn('No se pudo recuperar el signer:', error);
+    }
+  }
+  
+  return null;
 };
 
 /**
  * Conectar a un contrato
  */
-const getContract = (address, abi, isReadOnly = false) => {
-  const provider_or_signer = isReadOnly ? getProvider() : getSigner();
-  if (!provider_or_signer) {
+const getContract = async (address, abi, isReadOnly = false) => {
+  if (isReadOnly) {
+    return new ethers.Contract(address, abi, getProvider());
+  }
+  
+  const signer = await getSigner();
+  if (!signer) {
     console.warn("No hay signer disponible, usando solo lectura");
     return new ethers.Contract(address, abi, getProvider());
   }
-  return new ethers.Contract(address, abi, provider_or_signer);
+  return new ethers.Contract(address, abi, signer);
 };
 
 /**
  * DAO Contract
  */
-export const getDAOContract = (isReadOnly = false) => {
-  return getContract(CONTRACT_ADDRESSES.dao, DAOAbi, isReadOnly);
+export const getDAOContract = async (isReadOnly = false) => {
+  return await getContract(CONTRACT_ADDRESSES.dao, DAOAbi, isReadOnly);
 };
 
 /**
  * ShaCoin Contract
  */
-export const getShaCoinContract = (isReadOnly = false) => {
-  return getContract(CONTRACT_ADDRESSES.shaCoin, ShaCoinAbi, isReadOnly);
+export const getShaCoinContract = async (isReadOnly = false) => {
+  return await getContract(CONTRACT_ADDRESSES.shaCoin, ShaCoinAbi, isReadOnly);
 };
 
 /**
  * Parameters Contract
  */
-export const getParametersContract = (isReadOnly = true) => {
-  return getContract(CONTRACT_ADDRESSES.parameters, ParametersAbi, isReadOnly);
+export const getParametersContract = async (isReadOnly = true) => {
+  return await getContract(CONTRACT_ADDRESSES.parameters, ParametersAbi, isReadOnly);
 };
 
 /**
  * Staking Contract
  */
-export const getStakingContract = (isReadOnly = false) => {
-  return getContract(CONTRACT_ADDRESSES.staking, StakingAbi, isReadOnly);
+export const getStakingContract = async (isReadOnly = false) => {
+  return await getContract(CONTRACT_ADDRESSES.staking, StakingAbi, isReadOnly);
 };
 
 /**
  * ProposalManager Contract
  */
-export const getProposalManagerContract = (isReadOnly = false) => {
-  return getContract(CONTRACT_ADDRESSES.proposalManager, ProposalManagerAbi, isReadOnly);
+export const getProposalManagerContract = async (isReadOnly = false) => {
+  return await getContract(CONTRACT_ADDRESSES.proposalManager, ProposalManagerAbi, isReadOnly);
 };
 
 /**
  * StrategyManager Contract
  */
-export const getStrategyManagerContract = (isReadOnly = true) => {
-  return getContract(CONTRACT_ADDRESSES.strategyManager, StrategyManagerAbi, isReadOnly);
+export const getStrategyManagerContract = async (isReadOnly = true) => {
+  return await getContract(CONTRACT_ADDRESSES.strategyManager, StrategyManagerAbi, isReadOnly);
 };
 
 /**
  * PanicManager Contract
  */
-export const getPanicManagerContract = (isReadOnly = true) => {
-  return getContract(CONTRACT_ADDRESSES.panicManager, PanicManagerAbi, isReadOnly);
+export const getPanicManagerContract = async (isReadOnly = true) => {
+  return await getContract(CONTRACT_ADDRESSES.panicManager, PanicManagerAbi, isReadOnly);
 };
 
 /**
  * SimpleMajorityStrategy Contract
  */
-export const getSimpleMajorityStrategyContract = (isReadOnly = true) => {
-  return getContract(
+export const getSimpleMajorityStrategyContract = async (isReadOnly = true) => {
+  return await getContract(
     CONTRACT_ADDRESSES.simpleMajorityStrategy,
     SimpleMajorityStrategyAbi,
     isReadOnly
@@ -169,65 +194,75 @@ export const getSimpleMajorityStrategyContract = (isReadOnly = true) => {
  * Comprar tokens
  */
 export const buyTokens = async (ethAmount) => {
-  const dao = getDAOContract();
+  const dao = await getDAOContract();
+  console.log('Enviando transacción buyTokens...');
   const tx = await dao.buyTokens({
     value: ethers.parseEther(ethAmount.toString()),
   });
-  return tx.wait();
+  console.log('Transacción enviada, esperando confirmación...');
+  const receipt = await tx.wait();
+  console.log('Transacción confirmada en bloque:', receipt.blockNumber);
+  return receipt;
 };
 
 /**
  * Crear una propuesta
  */
 export const createProposal = async (title, description) => {
-  const dao = getDAOContract();
+  const dao = await getDAOContract();
   const tx = await dao.createProposal(title, description);
-  return tx.wait();
+  const receipt = await tx.wait();
+  return receipt;
 };
 
 /**
  * Votar en una propuesta
  */
 export const vote = async (proposalId, support) => {
-  const dao = getDAOContract();
+  const dao = await getDAOContract();
   const tx = await dao.vote(proposalId, support);
-  return tx.wait();
+  const receipt = await tx.wait();
+  return receipt;
 };
 
 /**
  * Hacer stake para votar
  */
 export const stakeForVoting = async (amount) => {
-  const dao = getDAOContract();
+  const dao = await getDAOContract();
   const tx = await dao.stakeForVoting(ethers.parseEther(amount.toString()));
-  return tx.wait();
+  const receipt = await tx.wait();
+  return receipt;
 };
 
 /**
  * Hacer stake para proponer
  */
 export const stakeForProposing = async (amount) => {
-  const dao = getDAOContract();
+  const dao = await getDAOContract();
   const tx = await dao.stakeForProposing(ethers.parseEther(amount.toString()));
-  return tx.wait();
+  const receipt = await tx.wait();
+  return receipt;
 };
 
 /**
  * Deshacer stake de votación
  */
 export const unstakeVoting = async () => {
-  const dao = getDAOContract();
+  const dao = await getDAOContract();
   const tx = await dao.unstakeVoting();
-  return tx.wait();
+  const receipt = await tx.wait();
+  return receipt;
 };
 
 /**
  * Deshacer stake de proposición
  */
 export const unstakeProposing = async () => {
-  const dao = getDAOContract();
+  const dao = await getDAOContract();
   const tx = await dao.unstakeProposing();
-  return tx.wait();
+  const receipt = await tx.wait();
+  return receipt;
 };
 
 // ====== ShaCoin Functions ======
@@ -236,18 +271,24 @@ export const unstakeProposing = async () => {
  * Obtener el balance de tokens
  */
 export const getTokenBalance = async (address) => {
-  const shaCoin = getShaCoinContract(true);
+  const shaCoin = await getShaCoinContract(true);
+  console.log('Consultando balance de ShaCoin para:', address);
+  console.log('Dirección del contrato ShaCoin:', CONTRACT_ADDRESSES.shaCoin);
   const balance = await shaCoin.balanceOf(address);
-  return ethers.formatEther(balance);
+  console.log('Balance raw:', balance.toString());
+  const formattedBalance = ethers.formatEther(balance);
+  console.log('Balance formateado:', formattedBalance);
+  return formattedBalance;
 };
 
 /**
  * Aprobar tokens para uso en otro contrato
  */
 export const approveTokens = async (spenderAddress, amount) => {
-  const shaCoin = getShaCoinContract();
+  const shaCoin = await getShaCoinContract();
   const tx = await shaCoin.approve(spenderAddress, ethers.parseEther(amount.toString()));
-  return tx.wait();
+  const receipt = await tx.wait();
+  return receipt;
 };
 
 // ====== Staking Functions ======
@@ -256,7 +297,7 @@ export const approveTokens = async (spenderAddress, amount) => {
  * Obtener el stake para votar
  */
 export const getVotingStake = async (address) => {
-  const staking = getStakingContract(true);
+  const staking = await getStakingContract(true);
   const stake = await staking.getVotingStake(address);
   return ethers.formatEther(stake);
 };
@@ -265,7 +306,7 @@ export const getVotingStake = async (address) => {
  * Obtener el stake para proponer
  */
 export const getProposingStake = async (address) => {
-  const staking = getStakingContract(true);
+  const staking = await getStakingContract(true);
   const stake = await staking.getProposingStake(address);
   return ethers.formatEther(stake);
 };
@@ -276,7 +317,7 @@ export const getProposingStake = async (address) => {
  * Obtener los detalles de una propuesta
  */
 export const getProposal = async (proposalId) => {
-  const proposalManager = getProposalManagerContract(true);
+  const proposalManager = await getProposalManagerContract(true);
   const proposal = await proposalManager.getProposal(proposalId);
   return proposal;
 };
@@ -285,7 +326,7 @@ export const getProposal = async (proposalId) => {
  * Obtener el estado de una propuesta
  */
 export const getProposalState = async (proposalId) => {
-  const proposalManager = getProposalManagerContract(true);
+  const proposalManager = await getProposalManagerContract(true);
   const state = await proposalManager.getProposalState(proposalId);
   const states = ["ACTIVE", "ACCEPTED", "REJECTED", "EXPIRED"];
   return states[state];
@@ -295,7 +336,7 @@ export const getProposalState = async (proposalId) => {
  * Obtener los resultados de votación
  */
 export const getProposalResults = async (proposalId) => {
-  const proposalManager = getProposalManagerContract(true);
+  const proposalManager = await getProposalManagerContract(true);
   const [votesFor, votesAgainst] = await proposalManager.getProposalResults(proposalId);
   return {
     votesFor: votesFor.toString(),
@@ -309,7 +350,7 @@ export const getProposalResults = async (proposalId) => {
  * Obtener el precio del token
  */
 export const getTokenPrice = async () => {
-  const parameters = getParametersContract(true);
+  const parameters = await getParametersContract(true);
   const price = await parameters.tokenPrice();
   return ethers.formatEther(price);
 };
@@ -318,7 +359,7 @@ export const getTokenPrice = async () => {
  * Obtener el tiempo de bloqueo para staking
  */
 export const getStakingLockTime = async () => {
-  const parameters = getParametersContract(true);
+  const parameters = await getParametersContract(true);
   const lockTime = await parameters.stakingLockTime();
   return lockTime.toString();
 };
@@ -329,7 +370,7 @@ export const getStakingLockTime = async () => {
  * Verificar si la DAO está en pánico
  */
 export const isPanicked = async () => {
-  const panicManager = getPanicManagerContract(true);
+  const panicManager = await getPanicManagerContract(true);
   try {
     await panicManager.checkNotPanicked();
     return false;
