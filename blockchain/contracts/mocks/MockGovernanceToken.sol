@@ -29,6 +29,10 @@ contract MockGovernanceToken {
     }
 
     function balanceOf(address) external pure returns (uint256) {
-        return 0;
+        return 1000 ether;
+    }
+
+    function allowance(address, address) external pure returns (uint256) {
+        return 500 ether;
     }
 }

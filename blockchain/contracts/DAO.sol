@@ -209,5 +209,111 @@ contract DAO {
         (bool ok, ) = payable(to).call{value: amount}("");
         require(ok, "ETH transfer failed");
     }
+
+    // ===== Staking View Functions =====
+
+    function getVotingStake(address user) external view returns (uint256) {
+        return staking.getVotingStake(user);
+    }
+
+    function getProposingStake(address user) external view returns (uint256) {
+        return staking.getProposingStake(user);
+    }
+
+    function getTotalVotingStaked() external view returns (uint256) {
+        return staking.totalVotingStaked();
+    }
+
+    // ===== ProposalManager View Functions =====
+
+    function getProposal(uint256 _proposalId) external view returns (IProposalManager.Proposal memory) {
+        return proposalManager.getProposal(_proposalId);
+    }
+
+    function getProposalState(uint256 _proposalId) external view returns (IProposalManager.ProposalState) {
+        return proposalManager.getProposalState(_proposalId);
+    }
+
+    function getProposalResults(uint256 _proposalId) external view returns (uint256 votesFor, uint256 votesAgainst) {
+        return proposalManager.getProposalResults(_proposalId);
+    }
+
+    function getUserVote(uint256 _proposalId, address _voter) external view returns (IProposalManager.VoteType) {
+        return proposalManager.getUserVote(_proposalId, _voter);
+    }
+
+    function isProposalActive(uint256 _proposalId) external view returns (bool) {
+        return proposalManager.isProposalActive(_proposalId);
+    }
+
+    function hasUserVoted(uint256 _proposalId, address _voter) external view returns (bool) {
+        return proposalManager.hasUserVoted(_proposalId, _voter);
+    }
+
+    function hasProposalDeadlinePassed(uint256 _proposalId) external view returns (bool) {
+        return proposalManager.hasProposalDeadlinePassed(_proposalId);
+    }
+
+    // ===== ProposalManager State-Changing Functions =====
+
+    function finalizeProposal(uint256 _proposalId, uint256 _totalVotingPower) external notInPanic {
+        proposalManager.finalizeProposal(_proposalId, _totalVotingPower);
+    }
+
+    function expireProposal(uint256 _proposalId) external notInPanic {
+        proposalManager.expireProposal(_proposalId);
+    }
+
+    // ===== Parameters View Functions =====
+
+    function getTokenPrice() external view returns (uint256) {
+        return parameters.tokenPrice();
+    }
+
+    function getStakingLockTime() external view returns (uint256) {
+        return parameters.stakingLockTime();
+    }
+
+    function getTokensPerVotingPower() external view returns (uint256) {
+        return parameters.tokensPerVotingPower();
+    }
+
+    function getMinStakeForVoting() external view returns (uint256) {
+        return parameters.minStakeForVoting();
+    }
+
+    function getMinStakeForProposing() external view returns (uint256) {
+        return parameters.minStakeForProposing();
+    }
+
+    function getProposalDuration() external view returns (uint256) {
+        return parameters.proposalDuration();
+    }
+
+    // ===== Token View Functions =====
+
+    function getTokenBalance(address account) external view returns (uint256) {
+        return token.balanceOf(account);
+    }
+
+    function getTokenAllowance(address _owner, address spender) external view returns (uint256) {
+        return token.allowance(_owner, spender);
+    }
+
+    // ===== StrategyManager View Functions =====
+
+    function getActiveStrategyAddress() external view returns (address) {
+        return strategyManager.getActiveStrategyAddress();
+    }
+
+    // ===== PanicManager View Functions =====
+
+    function isPanicked() external view returns (bool) {
+        try panicManager.checkNotPanicked() {
+            return false;
+        } catch {
+            return true;
+        }
+    }
 }
 

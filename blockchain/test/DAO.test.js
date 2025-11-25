@@ -377,4 +377,157 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
       dao.connect(owner).withdrawETH(user.address, 1)
     ).to.be.reverted;
   });
+
+  // =====================================================
+  //          DAO FACADE — VIEW METHODS
+  // =====================================================
+
+  describe("DAO Facade — View Methods", () => {
+    it("getVotingStake: delega correctamente a Staking", async () => {
+      const stake = await dao.getVotingStake(user.address);
+      expect(stake).to.equal(0);
+    });
+
+    it("getProposingStake: delega correctamente a Staking", async () => {
+      const stake = await dao.getProposingStake(user.address);
+      expect(stake).to.equal(0);
+    });
+
+    it("getTotalVotingStaked: delega correctamente a Staking", async () => {
+      const total = await dao.getTotalVotingStaked();
+      expect(total).to.equal(ethers.parseEther("10000"));
+    });
+
+    it("getProposal: delega correctamente a ProposalManager", async () => {
+      const proposal = await dao.getProposal(1);
+      expect(proposal.proposer).to.equal("0x0000000000000000000000000000000000000123");
+      expect(proposal.title).to.equal("Test Proposal");
+      expect(proposal.description).to.equal("Test Description");
+      expect(proposal.votesFor).to.equal(100);
+      expect(proposal.votesAgainst).to.equal(50);
+      expect(proposal.state).to.equal(0); // ACTIVE
+    });
+
+    it("getProposalState: delega correctamente a ProposalManager", async () => {
+      const state = await dao.getProposalState(1);
+      expect(state).to.equal(0); // ACTIVE
+    });
+
+    it("getProposalResults: delega correctamente a ProposalManager", async () => {
+      const results = await dao.getProposalResults(1);
+      expect(results.votesFor).to.equal(100);
+      expect(results.votesAgainst).to.equal(50);
+    });
+
+    it("getUserVote: delega correctamente a ProposalManager", async () => {
+      const vote = await dao.getUserVote(1, user.address);
+      expect(vote).to.equal(1); // FOR
+    });
+
+    it("isProposalActive: delega correctamente a ProposalManager", async () => {
+      const active = await dao.isProposalActive(1);
+      expect(active).to.equal(true);
+    });
+
+    it("hasUserVoted: delega correctamente a ProposalManager", async () => {
+      const voted = await dao.hasUserVoted(1, user.address);
+      expect(voted).to.equal(true);
+    });
+
+    it("hasProposalDeadlinePassed: delega correctamente a ProposalManager", async () => {
+      const passed = await dao.hasProposalDeadlinePassed(1);
+      expect(passed).to.equal(false);
+    });
+
+    it("getTokenPrice: delega correctamente a Parameters", async () => {
+      const price = await dao.getTokenPrice();
+      expect(price).to.equal(ethers.parseEther("1"));
+    });
+
+    it("getStakingLockTime: delega correctamente a Parameters", async () => {
+      await parameters.setStakingLockTime(3600);
+      const lockTime = await dao.getStakingLockTime();
+      expect(lockTime).to.equal(3600);
+    });
+
+    it("getTokensPerVotingPower: delega correctamente a Parameters", async () => {
+      const tokens = await dao.getTokensPerVotingPower();
+      expect(tokens).to.equal(0); // default del mock
+    });
+
+    it("getMinStakeForVoting: delega correctamente a Parameters", async () => {
+      await parameters.setMinStakeForVoting(100);
+      const min = await dao.getMinStakeForVoting();
+      expect(min).to.equal(100);
+    });
+
+    it("getMinStakeForProposing: delega correctamente a Parameters", async () => {
+      await parameters.setMinStakeForProposing(200);
+      const min = await dao.getMinStakeForProposing();
+      expect(min).to.equal(200);
+    });
+
+    it("getProposalDuration: delega correctamente a Parameters", async () => {
+      await parameters.setProposalDuration(7 * 24 * 3600);
+      const duration = await dao.getProposalDuration();
+      expect(duration).to.equal(7 * 24 * 3600);
+    });
+
+    it("getTokenBalance: delega correctamente a Token", async () => {
+      const balance = await dao.getTokenBalance(user.address);
+      expect(balance).to.equal(ethers.parseEther("1000"));
+    });
+
+    it("getTokenAllowance: delega correctamente a Token", async () => {
+      const allowance = await dao.getTokenAllowance(user.address, dao.target);
+      expect(allowance).to.equal(ethers.parseEther("500"));
+    });
+
+    it("getActiveStrategyAddress: delega correctamente a StrategyManager", async () => {
+      await strategyManager.setActiveStrategy(user.address);
+      const strategyAddr = await dao.getActiveStrategyAddress();
+      expect(strategyAddr).to.equal(user.address);
+    });
+
+    it("isPanicked: delega correctamente a PanicManager", async () => {
+      let panicked = await dao.isPanicked();
+      expect(panicked).to.equal(false);
+
+      await panicManager.setPanic(true);
+      panicked = await dao.isPanicked();
+      expect(panicked).to.equal(true);
+    });
+  });
+
+  // =====================================================
+  //          DAO FACADE — STATE-CHANGE METHODS
+  // =====================================================
+
+  describe("DAO Facade — State-Change Methods", () => {
+    it("finalizeProposal: delega correctamente con notInPanic", async () => {
+      await expect(
+        dao.connect(owner).finalizeProposal(1, 1000)
+      ).to.not.be.reverted;
+    });
+
+    it("finalizeProposal: revierte si panic", async () => {
+      await panicManager.setPanic(true);
+      await expect(
+        dao.connect(owner).finalizeProposal(1, 1000)
+      ).to.be.reverted;
+    });
+
+    it("expireProposal: delega correctamente con notInPanic", async () => {
+      await expect(
+        dao.connect(owner).expireProposal(1)
+      ).to.not.be.reverted;
+    });
+
+    it("expireProposal: revierte si panic", async () => {
+      await panicManager.setPanic(true);
+      await expect(
+        dao.connect(owner).expireProposal(1)
+      ).to.be.reverted;
+    });
+  });
 });

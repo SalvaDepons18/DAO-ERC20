@@ -33,6 +33,10 @@ contract MockStaking {
         return 0;
     }
 
+    function totalVotingStaked() external pure returns (uint256) {
+        return 10000 ether;
+    }
+
     function setCurrentUser(address user) external {
         currentUser = user;
     }

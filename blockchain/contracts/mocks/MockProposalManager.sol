@@ -5,6 +5,25 @@ interface IProposalManager {
     enum VoteType { NONE, FOR, AGAINST }
 }
 
+enum ProposalState {
+    ACTIVE,
+    ACCEPTED,
+    REJECTED,
+    EXPIRED
+}
+
+struct Proposal {
+    string title;
+    string description;
+    address proposer;
+    uint256 createdAt;
+    uint256 deadline;
+    uint256 votesFor;
+    uint256 votesAgainst;
+    ProposalState state;
+    address strategyUsed;
+}
+
 contract MockProposalManager {
     uint256 public nextId = 1;
 
@@ -55,6 +74,48 @@ contract MockProposalManager {
     function setCurrentCreator(address _creator) external {
         currentCreator = _creator;
     }
+
+    function getProposal(uint256) external view returns (Proposal memory) {
+        return Proposal({
+            title: "Test Proposal",
+            description: "Test Description",
+            proposer: address(0x123),
+            createdAt: block.timestamp - 1 days,
+            deadline: block.timestamp + 7 days,
+            votesFor: 100,
+            votesAgainst: 50,
+            state: ProposalState.ACTIVE,
+            strategyUsed: address(0x456)
+        });
+    }
+
+    function getProposalState(uint256) external pure returns (ProposalState) {
+        return ProposalState.ACTIVE;
+    }
+
+    function getProposalResults(uint256) external pure returns (uint256 votesFor, uint256 votesAgainst) {
+        return (100, 50);
+    }
+
+    function getUserVote(uint256, address) external pure returns (IProposalManager.VoteType) {
+        return IProposalManager.VoteType.FOR;
+    }
+
+    function isProposalActive(uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function hasUserVoted(uint256, address) external pure returns (bool) {
+        return true;
+    }
+
+    function hasProposalDeadlinePassed(uint256) external pure returns (bool) {
+        return false;
+    }
+
+    function finalizeProposal(uint256, uint256) external {}
+
+    function expireProposal(uint256) external {}
 }
 
 

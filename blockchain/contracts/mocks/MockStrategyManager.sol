@@ -11,4 +11,8 @@ contract MockStrategyManager {
     function getStrategy() external view returns (address) {
         return current;
     }
+
+    function getActiveStrategyAddress() external view returns (address) {
+        return current;
+    }
 }

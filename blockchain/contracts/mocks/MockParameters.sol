@@ -27,5 +27,12 @@ contract MockParameters {
     function setMinStakeForVoting(uint256 v) external { minStakeForVoting = v; }
     function setMinStakeForProposing(uint256 v) external { minStakeForProposing = v; }
     function setStakingLockTime(uint256 v) external { stakingLockTime = v; }
+    function setProposalDuration(uint256 v) external { proposalDuration = v; }
 
+    // Getters
+    function getMinStakeForVoting() external view returns (uint256) { return minStakeForVoting; }
+    function getMinStakeForProposing() external view returns (uint256) { return minStakeForProposing; }
+    function getStakingLockTime() external view returns (uint256) { return stakingLockTime; }
+    function getProposalDuration() external view returns (uint256) { return proposalDuration; }
+    function getTokensPerVotingPower() external view returns (uint256) { return tokensPerVotingPower; }
 }

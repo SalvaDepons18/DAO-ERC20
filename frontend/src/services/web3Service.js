@@ -313,12 +313,8 @@ export const stakeForProposing = async (amount) => {
  */
 export const unstakeVoting = async () => {
   await ensureReady();
-  const staking = await getStakingContract();
-  // We need user amount; call getVotingStake and pass exact amount
-  const s = await getSigner();
-  const owner = await s.getAddress();
-  const amount = await (await getStakingContract(true)).getVotingStake(owner);
-  const tx = await staking.unstakeFromVoting(amount);
+  const dao = await getDAOContract();
+  const tx = await dao.unstakeVoting();
   return await tx.wait();
 };
 
@@ -327,11 +323,8 @@ export const unstakeVoting = async () => {
  */
 export const unstakeProposing = async () => {
   await ensureReady();
-  const staking = await getStakingContract();
-  const s = await getSigner();
-  const owner = await s.getAddress();
-  const amount = await (await getStakingContract(true)).getProposingStake(owner);
-  const tx = await staking.unstakeFromProposing(amount);
+  const dao = await getDAOContract();
+  const tx = await dao.unstakeProposing();
   return await tx.wait();
 };
 
@@ -341,10 +334,8 @@ export const unstakeProposing = async () => {
  * Obtener el balance de tokens
  */
 export const getTokenBalance = async (address) => {
-  const shaCoin = await getShaCoinContract(true);
-  console.log('Consultando balance de ShaCoin para:', address);
-  console.log('Dirección del contrato ShaCoin:', CONTRACT_ADDRESSES.shaCoin);
-  const balance = await shaCoin.balanceOf(address);
+  const dao = await getDAOContract(true);
+  const balance = await dao.getTokenBalance(address);
   console.log('Balance raw:', balance.toString());
   const formattedBalance = ethers.formatEther(balance);
   console.log('Balance formateado:', formattedBalance);
@@ -371,8 +362,8 @@ export const approveTokens = async (spenderAddress, amount) => {
  * Obtener el stake para votar
  */
 export const getVotingStake = async (address) => {
-  const staking = await getStakingContract(true);
-  const stake = await staking.getVotingStake(address);
+  const dao = await getDAOContract(true);
+  const stake = await dao.getVotingStake(address);
   return ethers.formatEther(stake);
 };
 
@@ -380,8 +371,8 @@ export const getVotingStake = async (address) => {
  * Obtener el stake para proponer
  */
 export const getProposingStake = async (address) => {
-  const staking = await getStakingContract(true);
-  const stake = await staking.getProposingStake(address);
+  const dao = await getDAOContract(true);
+  const stake = await dao.getProposingStake(address);
   return ethers.formatEther(stake);
 };
 
@@ -391,8 +382,8 @@ export const getProposingStake = async (address) => {
  * Obtener los detalles de una propuesta
  */
 export const getProposal = async (proposalId) => {
-  const proposalManager = await getProposalManagerContract(true);
-  const proposal = await proposalManager.getProposal(proposalId);
+  const dao = await getDAOContract(true);
+  const proposal = await dao.getProposal(proposalId);
   return proposal;
 };
 
@@ -400,8 +391,8 @@ export const getProposal = async (proposalId) => {
  * Obtener el estado de una propuesta
  */
 export const getProposalState = async (proposalId) => {
-  const proposalManager = await getProposalManagerContract(true);
-  const state = await proposalManager.getProposalState(proposalId);
+  const dao = await getDAOContract(true);
+  const state = await dao.getProposalState(proposalId);
   const states = ["ACTIVE", "ACCEPTED", "REJECTED", "EXPIRED"];
   return states[state];
 };
@@ -410,8 +401,8 @@ export const getProposalState = async (proposalId) => {
  * Obtener los resultados de votación
  */
 export const getProposalResults = async (proposalId) => {
-  const proposalManager = await getProposalManagerContract(true);
-  const [votesFor, votesAgainst] = await proposalManager.getProposalResults(proposalId);
+  const dao = await getDAOContract(true);
+  const [votesFor, votesAgainst] = await dao.getProposalResults(proposalId);
   return {
     votesFor: votesFor.toString(),
     votesAgainst: votesAgainst.toString(),
@@ -423,27 +414,19 @@ export const getProposalResults = async (proposalId) => {
  */
 export const finalizeProposal = async (proposalId) => {
   await ensureReady();
-  const pm = await getProposalManagerContract();
+  const dao = await getDAOContract();
   let tvp = 0n;
   try {
-    const sm = await getStrategyManagerContract(true);
-    const activeStrategyAddr = await sm.getActiveStrategyAddress();
-    const strat = await getContract(activeStrategyAddr, SimpleMajorityStrategyAbi, true);
-    const val = await strat.getTotalVotingPower();
-    tvp = BigInt(val.toString());
+    const totalStaked = await dao.getTotalVotingStaked();
+    const tokensPerVP = await dao.getTokensPerVotingPower();
+    const tpvp = BigInt(tokensPerVP.toString());
+    if (tpvp !== 0n) {
+      tvp = BigInt(totalStaked.toString()) / tpvp;
+    }
   } catch (e) {
-    try {
-      const staking = await getStakingContract(true);
-      const params = await getParametersContract(true);
-      const totalStaked = await staking.totalVotingStaked();
-      const tokensPerVP = await params.tokensPerVotingPower();
-      const tpvp = BigInt(tokensPerVP.toString());
-      if (tpvp !== 0n) {
-        tvp = BigInt(totalStaked.toString()) / tpvp;
-      }
-    } catch {}
+    console.warn('Could not compute total voting power:', e);
   }
-  const tx = await pm.finalizeProposal(proposalId, tvp);
+  const tx = await dao.finalizeProposal(proposalId, tvp);
   return await tx.wait();
 };
 
@@ -452,8 +435,8 @@ export const finalizeProposal = async (proposalId) => {
  */
 export const expireProposal = async (proposalId) => {
   await ensureReady();
-  const pm = await getProposalManagerContract();
-  const tx = await pm.expireProposal(proposalId);
+  const dao = await getDAOContract();
+  const tx = await dao.expireProposal(proposalId);
   return await tx.wait();
 };
 
@@ -463,8 +446,8 @@ export const expireProposal = async (proposalId) => {
  * Obtener el precio del token
  */
 export const getTokenPrice = async () => {
-  const parameters = await getParametersContract(true);
-  const price = await parameters.tokenPrice();
+  const dao = await getDAOContract(true);
+  const price = await dao.getTokenPrice();
   return ethers.formatEther(price);
 };
 
@@ -472,16 +455,16 @@ export const getTokenPrice = async () => {
  * Obtener el tiempo de bloqueo para staking
  */
 export const getStakingLockTime = async () => {
-  const parameters = await getParametersContract(true);
-  const lockTime = await parameters.stakingLockTime();
+  const dao = await getDAOContract(true);
+  const lockTime = await dao.getStakingLockTime();
   return lockTime.toString();
 };
 
 // ====== Voting Power ======
 
 export const getVotingPower = async (address) => {
-  const sm = await getStrategyManagerContract(true);
-  const activeStrategyAddr = await sm.getActiveStrategyAddress();
+  const dao = await getDAOContract(true);
+  const activeStrategyAddr = await dao.getActiveStrategyAddress();
   const strat = await getContract(activeStrategyAddr, SimpleMajorityStrategyAbi, true);
   const vp = await strat.calculateVotingPower(address);
   return vp.toString();
@@ -493,13 +476,8 @@ export const getVotingPower = async (address) => {
  * Verificar si la DAO está en pánico
  */
 export const isPanicked = async () => {
-  const panicManager = await getPanicManagerContract(true);
-  try {
-    await panicManager.checkNotPanicked();
-    return false;
-  } catch {
-    return true;
-  }
+  const dao = await getDAOContract(true);
+  return await dao.isPanicked();
 };
 
 // Central helper: which actions are DAO-gated by panic
