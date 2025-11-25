@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { 
-  stakeForVoting, 
-  stakeForProposing, 
   unstakeVoting, 
   unstakeProposing,
   getVotingStake,
   getProposingStake,
   getSigner,
-  approveTokens,
   getVotingPower,
   isPanicked
 } from '../services/web3Service';
+import useStake from '../hooks/useStake';
 import { CONTRACT_ADDRESSES } from '../config/contracts';
 
 export default function StakingSection({ onTransactionSuccess }) {
@@ -25,6 +23,9 @@ export default function StakingSection({ onTransactionSuccess }) {
   const [approving, setApproving] = useState(false);
   const [votingPower, setVotingPower] = useState('0');
   const [panicked, setPanicked] = useState(false);
+
+  const votingStakeHook = useStake('voting');
+  const proposingStakeHook = useStake('proposing');
 
   useEffect(() => {
     loadStakes();
@@ -56,7 +57,9 @@ export default function StakingSection({ onTransactionSuccess }) {
     setApproving(true);
     try {
       console.log('Aprobando', amount, 'tokens al Staking...');
-      await approveTokens(CONTRACT_ADDRESSES.staking, amount);
+      // Decide hook based on active tab
+      const hook = activeTab === 'voting' ? votingStakeHook : proposingStakeHook;
+      await hook.approve(amount);
       setSuccess(`✅ Tokens aprobados! Ahora puedes hacer stake.`);
     } catch (error) {
       console.error('Error aprobando tokens:', error);
@@ -79,7 +82,7 @@ export default function StakingSection({ onTransactionSuccess }) {
     setLoading(true);
     try {
       console.log('Staking', votingStake, 'para votar...');
-      const receipt = await stakeForVoting(votingStake);
+      const receipt = await votingStakeHook.stake(votingStake);
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Stake exitoso! Hash: ${txHash}`);
       setVotingStake('');
@@ -131,7 +134,7 @@ export default function StakingSection({ onTransactionSuccess }) {
     setLoading(true);
     try {
       console.log('Staking', proposingStake, 'para proponer...');
-      const receipt = await stakeForProposing(proposingStake);
+      const receipt = await proposingStakeHook.stake(proposingStake);
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Stake exitoso! Hash: ${txHash}`);
       setProposingStake('');

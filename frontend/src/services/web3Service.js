@@ -356,6 +356,9 @@ export const getTokenBalance = async (address) => {
  */
 export const approveTokens = async (spenderAddress, amount) => {
   await ensureReady();
+  if (!ethers.isAddress(spenderAddress)) {
+    throw new Error("Dirección inválida");
+  }
   const shaCoin = await getShaCoinContract();
   const tx = await shaCoin.approve(spenderAddress, ethers.parseEther(amount.toString()));
   const receipt = await tx.wait();

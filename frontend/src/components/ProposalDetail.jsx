@@ -10,13 +10,20 @@ export default function ProposalDetail({ proposal, onClose }) {
 
   // quick check panic state (non-blocking UI init)
   isPanicked().then(setPanicked).catch(() => setPanicked(false));
-  const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleString('es-ES');
+  // Normalize seconds/ms to milliseconds
+  const toMs = (val) => {
+    const n = typeof val === 'bigint' ? Number(val) : Number(val);
+    return n < 1e12 ? n * 1000 : n;
   };
 
-  const getTimeRemaining = (deadline) => {
+  const formatDate = (timestamp) => {
+    return new Date(toMs(timestamp)).toLocaleString('es-ES');
+  };
+
+  const getTimeRemaining = (deadlineSecOrMs) => {
     const now = Date.now();
-    const diff = deadline - now;
+    const deadlineMs = toMs(deadlineSecOrMs);
+    const diff = deadlineMs - now;
     if (diff <= 0) return 'Finalizada';
     
     const days = Math.floor(diff / 86400000);
@@ -32,8 +39,9 @@ export default function ProposalDetail({ proposal, onClose }) {
   const forPercentage = totalVotes > 0 ? ((proposal.votesFor / totalVotes) * 100).toFixed(1) : 0;
   const againstPercentage = totalVotes > 0 ? ((proposal.votesAgainst / totalVotes) * 100).toFixed(1) : 0;
 
-  const canExpire = proposal.stateName === 'ACTIVE' && Date.now() > proposal.deadline;
-  const canFinalize = proposal.stateName === 'ACTIVE' && Date.now() <= proposal.deadline;
+  const deadlineMs = toMs(proposal.deadline);
+  const canExpire = proposal.stateName === 'ACTIVE' && Date.now() > deadlineMs;
+  const canFinalize = proposal.stateName === 'ACTIVE' && Date.now() <= deadlineMs;
 
   const onFinalize = async () => {
     setError(''); setSuccess(''); setLoading(true);
