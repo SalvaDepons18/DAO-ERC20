@@ -26,5 +26,6 @@ contract MockParameters {
     // Simple setters for tests
     function setMinStakeForVoting(uint256 v) external { minStakeForVoting = v; }
     function setMinStakeForProposing(uint256 v) external { minStakeForProposing = v; }
+    function setStakingLockTime(uint256 v) external { stakingLockTime = v; }
 
 }

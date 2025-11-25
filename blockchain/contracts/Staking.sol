@@ -5,13 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-/**
- * @title Interface de Parameters
- * @dev Debe proveer stakingLockTime() en segundos.
- */
-interface IParameters {
-    function stakingLockTime() external view returns (uint256);
-}
+import "./interfaces/IParameters.sol";
 
 /**
  * @title Staking para la DAO
@@ -53,6 +47,8 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
     event UnstakedVoting(address indexed user, uint256 amount);
     event UnstakedProposing(address indexed user, uint256 amount);
     event ParametersUpdated(address oldAddress, address newAddress);
+    event VotingLockUpdated(uint256 oldValue, uint256 newValue);
+    event ProposingLockUpdated(uint256 oldValue, uint256 newValue);
 
     constructor(address _token, address _parameters)
         Ownable(msg.sender)
@@ -75,7 +71,7 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
         votingStake[msg.sender] += amount;
         totalVotingStaked += amount;
 
-        uint256 newLock = block.timestamp + votingLock;
+        uint256 newLock = block.timestamp + parameters.stakingLockTime();
         lockedUntilVoting[msg.sender] = newLock;
 
         emit StakedForVoting(msg.sender, amount, newLock);
@@ -88,7 +84,7 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
         votingStake[user] += amount;
         totalVotingStaked += amount;
 
-        uint256 newLock = block.timestamp + votingLock;
+        uint256 newLock = block.timestamp + parameters.stakingLockTime();
         lockedUntilVoting[user] = newLock;
 
         emit StakedForVoting(user, amount, newLock);
@@ -101,7 +97,7 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
         proposalStake[msg.sender] += amount;
         totalProposalStaked += amount;
 
-        uint256 newLock = block.timestamp + proposingLock;
+        uint256 newLock = block.timestamp + parameters.stakingLockTime();
         lockedUntilProposing[msg.sender] = newLock;
 
         emit StakedForProposing(msg.sender, amount, newLock);
@@ -114,7 +110,7 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
         proposalStake[user] += amount;
         totalProposalStaked += amount;
 
-        uint256 newLock = block.timestamp + proposingLock;
+        uint256 newLock = block.timestamp + parameters.stakingLockTime();
         lockedUntilProposing[user] = newLock;
 
         emit StakedForProposing(user, amount, newLock);
@@ -164,12 +160,18 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
     // Admin
     // -------------------------------------------------------------------------
 
-    function setVotingLock(uint256 newLock) external onlyOwner {
-        votingLock = newLock;
+    function setVotingLock(uint256 /* newLock */) external onlyOwner {
+        uint256 old = votingLock;
+        uint256 value = parameters.stakingLockTime();
+        votingLock = value;
+        emit VotingLockUpdated(old, value);
     }
 
-    function setProposingLock(uint256 newLock) external onlyOwner {
-        proposingLock = newLock;
+    function setProposingLock(uint256 /* newLock */) external onlyOwner {
+        uint256 old = proposingLock;
+        uint256 value = parameters.stakingLockTime();
+        proposingLock = value;
+        emit ProposingLockUpdated(old, value);
     }
 
     function setParameters(address newParameters) external onlyOwner {

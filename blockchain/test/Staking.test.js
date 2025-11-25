@@ -6,8 +6,7 @@ describe("Staking", function () {
   let ShaCoin, sha, Staking, staking, Parameters, parameters;
   let owner, user, user2;
 
-  const VOTING_LOCK = 1000;
-  const PROPOSING_LOCK = 2000;
+  const LOCK_TIME = 1000;
 
   beforeEach(async () => {
     [owner, user, user2] = await ethers.getSigners();
@@ -33,13 +32,16 @@ describe("Staking", function () {
     );
     await staking.waitForDeployment();
 
-    await staking.connect(owner).setVotingLock(VOTING_LOCK);
-    await staking.connect(owner).setProposingLock(PROPOSING_LOCK);
+    // Configure global staking lock time in Parameters
+    await parameters.connect(owner).setStakingLockTime(LOCK_TIME);
+    // Refresh local caches for visibility (events/UI)
+    await staking.connect(owner).setVotingLock(0);
+    await staking.connect(owner).setProposingLock(0);
   });
 
   it("Debe setear correctamente los locks", async () => {
-    expect(await staking.votingLock()).to.equal(VOTING_LOCK);
-    expect(await staking.proposingLock()).to.equal(PROPOSING_LOCK);
+    expect(await staking.votingLock()).to.equal(LOCK_TIME);
+    expect(await staking.proposingLock()).to.equal(LOCK_TIME);
   });
 
   it("Debe setear correctamente el token", async () => {
@@ -67,7 +69,7 @@ describe("Staking", function () {
     const block = await ethers.provider.getBlock(tx.blockNumber);
 
     expect(await staking.lockedUntilVoting(user.address))
-      .to.equal(block.timestamp + VOTING_LOCK);
+      .to.equal(block.timestamp + LOCK_TIME);
   });
 
   it("Debe revertir si el amount de stakeForVoting es 0", async () => {
@@ -89,7 +91,7 @@ describe("Staking", function () {
     await sha.connect(user).approve(staking.target, 1000);
     await staking.connect(user).stakeForVoting(1000);
 
-    await ethers.provider.send("evm_increaseTime", [VOTING_LOCK + 1]);
+    await ethers.provider.send("evm_increaseTime", [LOCK_TIME + 1]);
     await ethers.provider.send("evm_mine");
 
     await staking.connect(user).unstakeFromVoting(1000);
@@ -102,7 +104,7 @@ describe("Staking", function () {
     await sha.connect(user).approve(staking.target, 500);
     await staking.connect(user).stakeForVoting(500);
 
-    await ethers.provider.send("evm_increaseTime", [VOTING_LOCK + 1]);
+    await ethers.provider.send("evm_increaseTime", [LOCK_TIME + 1]);
     await ethers.provider.send("evm_mine");
 
     await expect(
@@ -124,7 +126,7 @@ describe("Staking", function () {
     const block = await ethers.provider.getBlock(tx.blockNumber);
 
     expect(await staking.lockedUntilProposing(user.address))
-      .to.equal(block.timestamp + PROPOSING_LOCK);
+      .to.equal(block.timestamp + LOCK_TIME);
   });
 
   it("Debe revertir si amount de stakeForProposing es 0", async () => {
@@ -146,7 +148,7 @@ describe("Staking", function () {
     await sha.connect(user).approve(staking.target, 3000);
     await staking.connect(user).stakeForProposing(3000);
 
-    await ethers.provider.send("evm_increaseTime", [PROPOSING_LOCK + 1]);
+    await ethers.provider.send("evm_increaseTime", [LOCK_TIME + 1]);
     await ethers.provider.send("evm_mine");
 
     await staking.connect(user).unstakeFromProposing(3000);
@@ -159,12 +161,27 @@ describe("Staking", function () {
     await sha.connect(user).approve(staking.target, 1000);
     await staking.connect(user).stakeForProposing(1000);
 
-    await ethers.provider.send("evm_increaseTime", [PROPOSING_LOCK + 1]);
+    await ethers.provider.send("evm_increaseTime", [LOCK_TIME + 1]);
     await ethers.provider.send("evm_mine");
 
     await expect(
       staking.connect(user).unstakeFromProposing(2000)
     ).to.be.revertedWithCustomError(staking, "InsufficientStake");
+  });
+
+  it("Emite eventos al actualizar locks desde Parameters", async () => {
+    // change parameter and refresh locks, expect events with old/new values
+    const NEW_LOCK = 2000;
+    await parameters.connect(owner).setStakingLockTime(NEW_LOCK);
+
+    await expect(staking.connect(owner).setVotingLock(999))
+      .to.emit(staking, "VotingLockUpdated").withArgs(LOCK_TIME, NEW_LOCK);
+
+    await expect(staking.connect(owner).setProposingLock(123))
+      .to.emit(staking, "ProposingLockUpdated").withArgs(LOCK_TIME, NEW_LOCK);
+
+    expect(await staking.votingLock()).to.equal(NEW_LOCK);
+    expect(await staking.proposingLock()).to.equal(NEW_LOCK);
   });
 
   it("getVotingStake debe retornar correctamente", async () => {
