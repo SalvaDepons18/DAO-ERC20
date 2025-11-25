@@ -243,7 +243,7 @@ export default function StakingSection({ onTransactionSuccess }) {
               onChange={(e) => setVotingStake(e.target.value)}
               placeholder="Cantidad de tokens"
               min="0"
-              disabled={loading || approving || panicked}
+              disabled={loading || approving}
               required
             />
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -251,11 +251,11 @@ export default function StakingSection({ onTransactionSuccess }) {
                 type="button" 
                 className="btn btn-secondary" 
                 onClick={() => handleApprove(votingStake)}
-                disabled={loading || approving || !votingStake || parseFloat(votingStake) <= 0 || panicked}
+                disabled={loading || approving || !votingStake || parseFloat(votingStake) <= 0}
               >
                 {approving ? 'Aprobando...' : '1. Aprobar Tokens (Staking)'}
               </button>
-              <button type="submit" className="btn btn-primary" disabled={loading || approving || panicked}>
+              <button type="submit" className="btn btn-primary" disabled={loading || approving}>
                 {loading ? 'Procesando...' : '2. Stake para Votar'}
               </button>
             </div>
@@ -272,7 +272,7 @@ export default function StakingSection({ onTransactionSuccess }) {
               <button 
                 className="btn btn-secondary" 
                 onClick={() => handleUnstake('voting')}
-                disabled={loading || panicked}
+                disabled={loading}
               >
                 Retirar Stake
               </button>
@@ -290,7 +290,7 @@ export default function StakingSection({ onTransactionSuccess }) {
               onChange={(e) => setProposingStake(e.target.value)}
               placeholder="Cantidad de tokens"
               min="0"
-              disabled={loading || approving || panicked}
+              disabled={loading || approving}
               required
             />
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -298,11 +298,11 @@ export default function StakingSection({ onTransactionSuccess }) {
                 type="button" 
                 className="btn btn-secondary" 
                 onClick={() => handleApprove(proposingStake)}
-                disabled={loading || approving || !proposingStake || parseFloat(proposingStake) <= 0 || panicked}
+                disabled={loading || approving || !proposingStake || parseFloat(proposingStake) <= 0}
               >
                 {approving ? 'Aprobando...' : '1. Aprobar Tokens'}
               </button>
-              <button type="submit" className="btn btn-primary" disabled={loading || approving || panicked}>
+              <button type="submit" className="btn btn-primary" disabled={loading || approving}>
                 {loading ? 'Procesando...' : '2. Stake para Proponer'}
               </button>
             </div>
@@ -316,7 +316,7 @@ export default function StakingSection({ onTransactionSuccess }) {
               <button 
                 className="btn btn-secondary" 
                 onClick={() => handleUnstake('proposing')}
-                disabled={loading || panicked}
+                disabled={loading}
               >
                 Retirar Stake
               </button>

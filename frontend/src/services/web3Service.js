@@ -418,10 +418,29 @@ export const getProposalResults = async (proposalId) => {
 /**
  * Finalizar una propuesta (evalúa resultado) 
  */
-export const finalizeProposal = async (proposalId, totalVotingPower = 0n) => {
+export const finalizeProposal = async (proposalId) => {
   await ensureReady();
   const pm = await getProposalManagerContract();
-  const tx = await pm.finalizeProposal(proposalId, totalVotingPower);
+  let tvp = 0n;
+  try {
+    const sm = await getStrategyManagerContract(true);
+    const activeStrategyAddr = await sm.getActiveStrategyAddress();
+    const strat = await getContract(activeStrategyAddr, SimpleMajorityStrategyAbi, true);
+    const val = await strat.getTotalVotingPower();
+    tvp = BigInt(val.toString());
+  } catch (e) {
+    try {
+      const staking = await getStakingContract(true);
+      const params = await getParametersContract(true);
+      const totalStaked = await staking.totalVotingStaked();
+      const tokensPerVP = await params.tokensPerVotingPower();
+      const tpvp = BigInt(tokensPerVP.toString());
+      if (tpvp !== 0n) {
+        tvp = BigInt(totalStaked.toString()) / tpvp;
+      }
+    } catch {}
+  }
+  const tx = await pm.finalizeProposal(proposalId, tvp);
   return await tx.wait();
 };
 
@@ -478,4 +497,17 @@ export const isPanicked = async () => {
   } catch {
     return true;
   }
+};
+
+// Central helper: which actions are DAO-gated by panic
+export const isDAOAction = (action) => {
+  const daoActions = new Set([
+    'createProposal',
+    'vote',
+    'changeVote',
+    'buyTokens',
+    'finalizeProposal',
+    'expireProposal',
+  ]);
+  return daoActions.has(action);
 };

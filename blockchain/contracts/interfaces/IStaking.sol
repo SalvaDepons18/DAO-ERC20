@@ -12,6 +12,7 @@ interface IStaking {
     function unstakeFromProposing(uint256 amount) external;
     function getVotingStake(address user) external view returns (uint256);
     function getProposingStake(address user) external view returns (uint256);
+    function totalVotingStaked() external view returns (uint256);
     function setVotingLock(uint256 newLock) external;
     function setProposingLock(uint256 newLock) external;
     function setParameters(address newParameters) external;

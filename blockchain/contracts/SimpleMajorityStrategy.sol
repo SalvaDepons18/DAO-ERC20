@@ -21,6 +21,7 @@ contract SimpleMajorityStrategy is IVotingStrategy {
     
     Parameters public parameters;
 
+
     /**
      * @dev Constructor que inicializa las referencias a Staking y Parameters
      */
@@ -68,5 +69,17 @@ contract SimpleMajorityStrategy is IVotingStrategy {
         uint256 /*totalVotingPower*/
     ) external pure override returns (bool) {
         return votesFor > votesAgainst;
+    }
+
+    /**
+     * @notice Retorna el poder de voto total del sistema basado en el stake total
+     */
+    function getTotalVotingPower() external view returns (uint256) {
+        uint256 totalStake = staking.totalVotingStaked();
+        uint256 tokensPerVP = parameters.tokensPerVotingPower();
+        if (tokensPerVP == 0) {
+            return 0;
+        }
+        return totalStake / tokensPerVP;
     }
 }
