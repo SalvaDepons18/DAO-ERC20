@@ -506,14 +506,14 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
   describe("DAO Facade — State-Change Methods", () => {
     it("finalizeProposal: delega correctamente con notInPanic", async () => {
       await expect(
-        dao.connect(owner).finalizeProposal(1, 1000)
+        dao.connect(owner).finalizeProposal(1)
       ).to.not.be.reverted;
     });
 
     it("finalizeProposal: revierte si panic", async () => {
       await panicManager.setPanic(true);
       await expect(
-        dao.connect(owner).finalizeProposal(1, 1000)
+        dao.connect(owner).finalizeProposal(1)
       ).to.be.reverted;
     });
 

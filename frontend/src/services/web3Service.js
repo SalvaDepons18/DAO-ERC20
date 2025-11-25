@@ -5,8 +5,6 @@ import { CONTRACT_ADDRESSES, DEFAULT_CHAIN_ID } from "../config/contracts";
 import DAOAbi from "../abi/DAO.json";
 import ShaCoinAbi from "../abi/ShaCoin.json";
 import ParametersAbi from "../abi/Parameters.json";
-import StakingAbi from "../abi/Staking.json";
-import ProposalManagerAbi from "../abi/ProposalManager.json";
 import StrategyManagerAbi from "../abi/StrategyManager.json";
 import PanicManagerAbi from "../abi/PanicManager.json";
 import SimpleMajorityStrategyAbi from "../abi/SimpleMajorityStrategy.json";
@@ -180,19 +178,6 @@ export const getParametersContract = async (isReadOnly = true) => {
   return await getContract(CONTRACT_ADDRESSES.parameters, ParametersAbi, isReadOnly);
 };
 
-/**
- * Staking Contract
- */
-export const getStakingContract = async (isReadOnly = false) => {
-  return await getContract(CONTRACT_ADDRESSES.staking, StakingAbi, isReadOnly);
-};
-
-/**
- * ProposalManager Contract
- */
-export const getProposalManagerContract = async (isReadOnly = false) => {
-  return await getContract(CONTRACT_ADDRESSES.proposalManager, ProposalManagerAbi, isReadOnly);
-};
 
 /**
  * StrategyManager Contract
@@ -279,15 +264,18 @@ export const changeVote = async (proposalId, support) => {
  */
 export const stakeForVoting = async (amount) => {
   await ensureReady();
+  await assertNotPanicked();
   const amt = ethers.parseEther(amount.toString());
-  const [sha, staking, s] = [await getShaCoinContract(), await getStakingContract(), await getSigner()];
+  const sha = await getShaCoinContract();
+  const s = await getSigner();
   const owner = await s.getAddress();
-  const allowance = await sha.allowance(owner, CONTRACT_ADDRESSES.staking);
+  const allowance = await sha.allowance(owner, CONTRACT_ADDRESSES.dao);
   if (allowance < amt) {
-    const txA = await sha.approve(CONTRACT_ADDRESSES.staking, amt);
+    const txA = await sha.approve(CONTRACT_ADDRESSES.dao, amt);
     await txA.wait();
   }
-  const tx = await staking.stakeForVoting(amt);
+  const dao = await getDAOContract();
+  const tx = await dao.stakeForVoting(amt);
   return await tx.wait();
 };
 
@@ -296,15 +284,18 @@ export const stakeForVoting = async (amount) => {
  */
 export const stakeForProposing = async (amount) => {
   await ensureReady();
+  await assertNotPanicked();
   const amt = ethers.parseEther(amount.toString());
-  const [sha, staking, s] = [await getShaCoinContract(), await getStakingContract(), await getSigner()];
+  const sha = await getShaCoinContract();
+  const s = await getSigner();
   const owner = await s.getAddress();
-  const allowance = await sha.allowance(owner, CONTRACT_ADDRESSES.staking);
+  const allowance = await sha.allowance(owner, CONTRACT_ADDRESSES.dao);
   if (allowance < amt) {
-    const txA = await sha.approve(CONTRACT_ADDRESSES.staking, amt);
+    const txA = await sha.approve(CONTRACT_ADDRESSES.dao, amt);
     await txA.wait();
   }
-  const tx = await staking.stakeForProposing(amt);
+  const dao = await getDAOContract();
+  const tx = await dao.stakeForProposing(amt);
   return await tx.wait();
 };
 
@@ -414,19 +405,9 @@ export const getProposalResults = async (proposalId) => {
  */
 export const finalizeProposal = async (proposalId) => {
   await ensureReady();
+  await assertNotPanicked();
   const dao = await getDAOContract();
-  let tvp = 0n;
-  try {
-    const totalStaked = await dao.getTotalVotingStaked();
-    const tokensPerVP = await dao.getTokensPerVotingPower();
-    const tpvp = BigInt(tokensPerVP.toString());
-    if (tpvp !== 0n) {
-      tvp = BigInt(totalStaked.toString()) / tpvp;
-    }
-  } catch (e) {
-    console.warn('Could not compute total voting power:', e);
-  }
-  const tx = await dao.finalizeProposal(proposalId, tvp);
+  const tx = await dao.finalizeProposal(proposalId);
   return await tx.wait();
 };
 

@@ -29,4 +29,9 @@ interface IVotingStrategy {
         uint256 votesAgainst,
         uint256 totalVotingPower
     ) external view returns (bool);
+
+    /**
+     * @notice Retorna el poder de voto total del sistema según la estrategia.
+     */
+    function getTotalVotingPower() external view returns (uint256);
 }

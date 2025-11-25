@@ -256,8 +256,20 @@ contract DAO {
 
     // ===== ProposalManager State-Changing Functions =====
 
-    function finalizeProposal(uint256 _proposalId, uint256 _totalVotingPower) external notInPanic {
-        proposalManager.finalizeProposal(_proposalId, _totalVotingPower);
+    function finalizeProposal(uint256 _proposalId) external notInPanic {
+        // Obtener dirección de estrategia activa (compatible con mocks)
+        address strategyAddr = strategyManager.getActiveStrategyAddress();
+        uint256 totalVP = 0;
+        if (strategyAddr != address(0)) {
+            IVotingStrategy active = IVotingStrategy(strategyAddr);
+            // Intentar leer poder de voto total vía interfaz extendida
+            try active.getTotalVotingPower() returns (uint256 vp) {
+                totalVP = vp;
+            } catch {
+                totalVP = 0; // fallback seguro si la estrategia no implementa
+            }
+        }
+        proposalManager.finalizeProposal(_proposalId, totalVP);
     }
 
     function expireProposal(uint256 _proposalId) external notInPanic {

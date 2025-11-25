@@ -1,5 +1,65 @@
 import { useState } from 'react';
 import { createProposal } from '../services/web3Service';
+import useParameters from '../hooks/useParameters';
+
+export default function CreateProposal({ onTransactionSuccess }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const { params, loading: paramsLoading, error: paramsError } = useParameters();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (!title.trim() || !description.trim()) { setError('El título y descripción son requeridos'); return; }
+    setLoading(true);
+    try {
+      const receipt = await createProposal(title, description);
+      const txHash = receipt.hash || receipt.transactionHash;
+      setSuccess(`✅ Propuesta creada exitosamente! Hash: ${txHash}`);
+      setTitle(''); setDescription('');
+      if (onTransactionSuccess) onTransactionSuccess();
+    } catch (e) {
+      const m = e.message || e.toString(); const d = e.data || '';
+      if (d.includes('0x90c0d696') || m.includes('DuplicateProposal') || (m.includes('unknown custom error') && d.includes('90c0d696'))) {
+        setError('⚠️ Propuesta duplicada. Ya existe otra igual.');
+      } else if (d.includes('0xcabeb655') || m.includes('InsufficientProposingStake') || m.includes('MinStakeNotMet') || (m.includes('unknown custom error') && d.includes('cabeb655'))) {
+        const dyn = params ? params.minStakeProposing : 'cantidad mínima';
+        setError(`⚠️ Stake insuficiente para proponer. Mínimo requerido: ${dyn} tokens (haz stake en la sección Staking).`);
+      } else if (m.includes('user rejected') || m.includes('user denied')) {
+        setError('Transacción rechazada por el usuario.');
+      } else { setError(`Error: ${m}`); }
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="create-proposal">
+      <h2>Crear Nueva Propuesta</h2>
+      {(error || paramsError) && <div className="error-message">{error || paramsError}</div>}
+      {success && <div className="success-message">{success}</div>}
+      <p style={{ fontSize: '0.85em', color: '#666' }}>
+        {paramsLoading && 'Cargando parámetros...'}
+        {params && `Necesitas mínimo stake para proponer: ${params.minStakeProposing} tokens`}
+      </p>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>Título</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título de la propuesta" disabled={loading} required />
+        </div>
+        <div className="form-group">
+          <label>Descripción</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe tu propuesta en detalle" rows={5} disabled={loading} required />
+        </div>
+        <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Creando...' : 'Crear Propuesta'}</button>
+      </form>
+    </div>
+  );
+}
+import { useState } from 'react';
+import { createProposal } from '../services/web3Service';
 
 export default function CreateProposal({ onTransactionSuccess }) {
   const [title, setTitle] = useState('');
