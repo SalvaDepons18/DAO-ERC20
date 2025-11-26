@@ -41,8 +41,12 @@ export default function VotingPanel({ proposalId, onVoteSuccess }) {
       const receipt = await vote(proposalId, support);
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`Voto registrado. Tx: ${txHash}`);
+      // Actualizar estado local primero
       await refreshVoteState();
-      if (onVoteSuccess) onVoteSuccess();
+      // Notificar al padre después de un pequeño delay
+      if (onVoteSuccess) {
+        setTimeout(() => onVoteSuccess(), 500);
+      }
     } catch (e) {
       const decoded = decodeRevert(e);
       if (decoded === 'MinStakeNotMet' || decoded === 'InsufficientStake') {
@@ -72,8 +76,12 @@ export default function VotingPanel({ proposalId, onVoteSuccess }) {
       const receipt = await changeVote(proposalId, support);
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Voto actualizado. Tx: ${txHash}`);
+      // Actualizar estado local primero
       await refreshVoteState();
-      if (onVoteSuccess) onVoteSuccess();
+      // Notificar al padre después de un pequeño delay
+      if (onVoteSuccess) {
+        setTimeout(() => onVoteSuccess(), 500);
+      }
     } catch (e) {
       const decoded = decodeRevert(e);
       if (decoded === 'MinStakeNotMet' || decoded === 'InsufficientStake') {
