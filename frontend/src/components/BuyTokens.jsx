@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { buyTokens, getTokenBalance, getSigner } from '../services/web3Service';
+import { decodeRevert } from '../utils/decodeRevert';
 
 export default function BuyTokens({ onTransactionSuccess }) {
   const [ethAmount, setEthAmount] = useState('');
@@ -49,7 +50,10 @@ export default function BuyTokens({ onTransactionSuccess }) {
       
     } catch (error) {
       console.error('Error comprando tokens:', error);
-      setError(`❌ Error: ${error.message}`);
+      const d = decodeRevert(error);
+      if (/user (rejected|denied)/i.test(error.message||'')) setError('❌ Transacción rechazada por el usuario.');
+      else if (d === 'InsufficientETH') setError('❌ ETH insuficiente para la compra.');
+      else setError(`❌ ${d}`);
     } finally {
       setLoading(false);
     }

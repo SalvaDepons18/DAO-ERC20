@@ -6,6 +6,7 @@ import {
   getProposal,
   getProposalResults
 } from '../services/web3Service';
+import { decodeRevert } from '../utils/decodeRevert';
 
 export default function ProposalList({ refreshTrigger = 0 }) {
   const [filter, setFilter] = useState('ALL');
@@ -76,7 +77,8 @@ export default function ProposalList({ refreshTrigger = 0 }) {
       setProposals(loadedProposals);
     } catch (error) {
       console.error('Error cargando propuestas:', error);
-      setError(`Error al cargar propuestas: ${error.message}`);
+      const d = decodeRevert(error);
+      setError(`Error al cargar propuestas: ${d}`);
     } finally {
       setLoading(false);
     }
