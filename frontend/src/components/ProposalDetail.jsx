@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import VotingPanel from './VotingPanel';
 import { finalizeProposal, expireProposal, isPanicked } from '../services/web3Service';
+import { decodeRevert } from '../utils/decodeRevert';
 
 export default function ProposalDetail({ proposal, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -46,14 +47,12 @@ export default function ProposalDetail({ proposal, onClose }) {
   const onFinalize = async () => {
     setError(''); setSuccess(''); setLoading(true);
     try {
-      const receipt = await finalizeProposal(proposal.id, 0n);
+      const receipt = await finalizeProposal(proposal.id);
       const hash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Propuesta finalizada. Tx: ${hash}`);
     } catch (e) {
-      setError(`❌ Error finalizando: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
+      setError(`❌ ${decodeRevert(e)}`);
+    } finally { setLoading(false); }
   };
 
   const onExpire = async () => {
@@ -63,10 +62,8 @@ export default function ProposalDetail({ proposal, onClose }) {
       const hash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Propuesta expirada. Tx: ${hash}`);
     } catch (e) {
-      setError(`❌ Error expirando: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
+      setError(`❌ ${decodeRevert(e)}`);
+    } finally { setLoading(false); }
   };
 
   return (

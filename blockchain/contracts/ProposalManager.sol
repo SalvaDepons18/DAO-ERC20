@@ -63,6 +63,9 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
     
     // Votantes de cada propuesta: proposalId => voter => voteType
     mapping(uint256 => mapping(address => VoteType)) public votes;
+
+    // Peso de voto snapshot en el primer voto: proposalId => voter => weight
+    mapping(uint256 => mapping(address => uint256)) public voteWeightUsed;
     
     // Hash de propuestas para prevenir duplicados: keccak256(title, description) => exists
     mapping(bytes32 => bool) public proposalExists;
@@ -202,13 +205,16 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         if (_voteType == VoteType.NONE) revert InvalidVoteType();
         if (votes[_proposalId][msg.sender] != VoteType.NONE) revert AlreadyVoted();
 
-        // Calcular peso de voto usando la estrategia activa
+        // Obtener estrategia activa y calcular poder actual
         IVotingStrategy active = address(strategyManager) != address(0)
             ? strategyManager.getActiveStrategy()
             : votingStrategy;
-        
-        uint256 _votingWeight = active.calculateVotingPower(msg.sender);
-        if (_votingWeight == 0) revert InvalidVoteType();
+        uint256 currentWeight = active.calculateVotingPower(msg.sender);
+        if (currentWeight == 0) revert InvalidVoteType();
+
+        // Snapshot: registrar peso sólo en primer voto
+        voteWeightUsed[_proposalId][msg.sender] = currentWeight;
+        uint256 _votingWeight = currentWeight;
 
         // Registrar voto
         votes[_proposalId][msg.sender] = _voteType;
@@ -244,12 +250,8 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         VoteType currentVote = votes[_proposalId][msg.sender];
         if (currentVote == VoteType.NONE) revert NotVotedYet();
 
-        // Calcular peso de voto usando la estrategia activa
-        IVotingStrategy active = address(strategyManager) != address(0)
-            ? strategyManager.getActiveStrategy()
-            : votingStrategy;
-        
-        uint256 _votingWeight = active.calculateVotingPower(msg.sender);
+        // Usar siempre el peso snapshot original
+        uint256 _votingWeight = voteWeightUsed[_proposalId][msg.sender];
         if (_votingWeight == 0) revert InvalidVoteType();
 
         // Restar voto anterior

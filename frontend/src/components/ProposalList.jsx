@@ -4,7 +4,6 @@ import {
   getSigner,
   getProposalCount,
   getProposal,
-  getProposalState,
   getProposalResults
 } from '../services/web3Service';
 
@@ -24,12 +23,7 @@ export default function ProposalList({ refreshTrigger = 0 }) {
     { value: 'EXPIRED', label: 'Expiradas' }
   ];
 
-  const stateNames = {
-    0: 'ACTIVE',
-    1: 'ACCEPTED',
-    2: 'REJECTED',
-    3: 'EXPIRED'
-  };
+  // State names now returned by getProposal (stateName, rawState)
 
   useEffect(() => {
     loadProposals();
@@ -56,19 +50,16 @@ export default function ProposalList({ refreshTrigger = 0 }) {
       
       for (let i = 0; i < total; i++) {
         try {
-          const proposal = await getProposal(i);
-          const stateNameEnum = await getProposalState(i); // returns string
+          const proposal = await getProposal(i); // enhanced
           const { votesFor, votesAgainst } = await getProposalResults(i);
-          // Map string state back to numeric for filtering consistency
-          const enumToNum = { ACTIVE: 0, ACCEPTED: 1, REJECTED: 2, EXPIRED: 3 };
-          const stateNum = enumToNum[stateNameEnum] ?? 0;
+          const stateNum = proposal.rawState;
           const proposalData = {
             id: i,
             title: proposal.title,
             description: proposal.description,
             proposer: proposal.proposer,
             state: stateNum,
-            stateName: stateNameEnum,
+            stateName: proposal.stateName,
             votesFor: parseInt(votesFor),
             votesAgainst: parseInt(votesAgainst),
             deadline: parseInt(proposal.deadline.toString()) * 1000,

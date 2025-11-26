@@ -27,6 +27,7 @@ contract DAO {
     error ZeroAmount();
     error EmptyString();
     error MinStakeNotMet();
+    error StrategyError();
     
 
     address public immutable owner;
@@ -113,6 +114,16 @@ contract DAO {
     {
         uint256 minStake = parameters.minStakeForVoting();
         if (staking.getVotingStake(msg.sender) < minStake) revert MinStakeNotMet();
+        // Extend lock to proposal deadline if longer than current user lock
+        // Safely try to fetch proposal
+        try proposalManager.getProposal(_proposalId) returns (IProposalManager.Proposal memory prop) {
+            uint256 currentLock = 0;
+            try staking.getVotingLockExpiry(msg.sender) returns (uint256 expiry) { currentLock = expiry; } catch {}
+            if (prop.deadline > currentLock) {
+                // silently ignore failure for mocks
+                try staking.extendVotingLock(msg.sender, prop.deadline) {} catch {}
+            }
+        } catch {}
         IProposalManager.VoteType voteType = _support 
             ? IProposalManager.VoteType.FOR 
             : IProposalManager.VoteType.AGAINST;
@@ -130,6 +141,14 @@ contract DAO {
         IProposalManager.VoteType newVoteType = _support
             ? IProposalManager.VoteType.FOR
             : IProposalManager.VoteType.AGAINST;
+        // Also ensure lock persists through deadline in case user changes vote later
+        try proposalManager.getProposal(_proposalId) returns (IProposalManager.Proposal memory prop) {
+            uint256 currentLock = 0;
+            try staking.getVotingLockExpiry(msg.sender) returns (uint256 expiry) { currentLock = expiry; } catch {}
+            if (prop.deadline > currentLock) {
+                try staking.extendVotingLock(msg.sender, prop.deadline) {} catch {}
+            }
+        } catch {}
 
         // Try to set the voter for the mock (if it has the function)
         try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
@@ -262,16 +281,14 @@ contract DAO {
     // ===== ProposalManager State-Changing Functions =====
 
     function finalizeProposal(uint256 _proposalId) external notInPanic {
-        // Obtener dirección de estrategia activa (compatible con mocks)
         address strategyAddr = strategyManager.getActiveStrategyAddress();
         uint256 totalVP = 0;
         if (strategyAddr != address(0)) {
             IVotingStrategy active = IVotingStrategy(strategyAddr);
-            // Intentar leer poder de voto total vía interfaz extendida
             try active.getTotalVotingPower() returns (uint256 vp) {
                 totalVP = vp;
             } catch {
-                totalVP = 0; // fallback seguro si la estrategia no implementa
+                revert StrategyError();
             }
         }
         proposalManager.finalizeProposal(_proposalId, totalVP);

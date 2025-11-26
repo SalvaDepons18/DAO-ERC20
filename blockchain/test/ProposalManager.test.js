@@ -258,6 +258,33 @@ describe("ProposalManager", function () {
     expect(votesAgainst).to.equal(6000);
   });
 
+  it("Snapshot: aumentar stake tras votar y changeVote no altera peso", async () => {
+    // Crear propuesta
+    await proposalManager.connect(proposer).createProposal(
+      "Snapshot Test",
+      "Desc",
+      MIN_VOTING_POWER
+    );
+
+    // voter3 (1000 stake) vota FOR
+    await proposalManager.connect(voter3).vote(0, VoteType.FOR);
+    let results = await proposalManager.getProposalResults(0);
+    expect(results[0]).to.equal(1000);
+    expect(results[1]).to.equal(0);
+
+    // Aumentar stake de voter3 a 5000
+    await dummyToken.mint(voter3.address, ethers.parseEther("4000"));
+    await dummyToken.connect(voter3).approve(staking.target, ethers.parseEther("4000"));
+    await staking.connect(voter3).stakeForVoting(ethers.parseEther("4000"));
+
+    // Cambiar voto a AGAINST
+    await proposalManager.connect(voter3).changeVote(0, VoteType.AGAINST);
+    results = await proposalManager.getProposalResults(0);
+    // Debe haber restado 1000 y sumado 1000 (no 5000)
+    expect(results[0]).to.equal(0);
+    expect(results[1]).to.equal(1000);
+  });
+
   it("Debe rechazar voto después del deadline", async () => {
     await proposalManager.connect(proposer).createProposal(
       "Test Proposal",

@@ -6,19 +6,13 @@ import BuyTokens from "./components/BuyTokens";
 import StakingSection from "./components/StakingSection";
 import CreateProposal from "./components/CreateProposal";
 import ProposalList from "./components/ProposalList";
-import { 
-  getVotingStake,
-  getProposalManagerContract,
-  getSigner
-} from "./services/web3Service";
-import { 
+import PanicBanner from './components/PanicBanner';
+import {
   getVotingPower,
   getProposalCount,
   getProposalState,
-  getSigner,
-  isPanicked
-} from "./services/web3Service";
-import PanicBanner from './components/PanicBanner';
+  getSigner
+} from './services/web3Service';
 
 function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -31,32 +25,44 @@ function App() {
 
   useEffect(() => {
     loadDashboardData();
-    // Actualizar cada 10 segundos
-    const interval = setInterval(loadDashboardData, 10000);
-    
-    // Escuchar cambios de cuenta en MetaMask
+    let detachBlockListener;
+    // Escuchar nuevos bloques para refrescar datos (reemplaza polling)
+    if (window.ethereum && window.ethers) {
+      try {
+        const provider = new window.ethers.BrowserProvider(window.ethereum);
+        provider.on('block', () => { loadDashboardData(); });
+        detachBlockListener = () => provider.removeAllListeners('block');
+      } catch (e) {
+        console.warn('No se pudo inicializar listener de bloques, fallback a polling.', e.message);
+        const interval = setInterval(loadDashboardData, 15000);
+        detachBlockListener = () => clearInterval(interval);
+      }
+    } else {
+      const interval = setInterval(loadDashboardData, 15000);
+      detachBlockListener = () => clearInterval(interval);
+    }
+
+    // Escuchar cambios de cuenta y red
+    const handleAccountsChanged = (accounts) => {
+      console.log('Cuenta cambiada:', accounts);
+      setRefreshTrigger(prev => prev + 1);
+    };    
+    const handleChainChanged = () => {
+      console.log('Red cambiada');
+      window.location.reload();
+    };
     if (window.ethereum) {
-      const handleAccountsChanged = (accounts) => {
-        console.log('Cuenta cambiada:', accounts);
-        setRefreshTrigger(prev => prev + 1);
-      };
-      
-      const handleChainChanged = () => {
-        console.log('Red cambiada');
-        window.location.reload();
-      };
-      
       window.ethereum.on('accountsChanged', handleAccountsChanged);
       window.ethereum.on('chainChanged', handleChainChanged);
-      
-      return () => {
-        clearInterval(interval);
+    }
+
+    return () => {
+      detachBlockListener && detachBlockListener();
+      if (window.ethereum) {
         window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
         window.ethereum.removeListener('chainChanged', handleChainChanged);
-      };
-    }
-    
-    return () => clearInterval(interval);
+      }
+    };
   }, [refreshTrigger]);
 
   const loadDashboardData = async () => {

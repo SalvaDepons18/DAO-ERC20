@@ -198,4 +198,45 @@ describe("Staking", function () {
     expect(await staking.getProposingStake(user.address)).to.equal(400);
   });
 
+  // --------------------------------------------------------------
+  // extendVotingLock — pruebas de autorización y comportamiento
+  // --------------------------------------------------------------
+  describe("extendVotingLock", () => {
+    beforeEach(async () => {
+      await sha.connect(user).approve(staking.target, 1000);
+      await staking.connect(user).stakeForVoting(1000);
+    });
+
+    it("Debe revertir si llama alguien que no es daoController", async () => {
+      const currentLock = await staking.lockedUntilVoting(user.address);
+      await expect(
+        staking.connect(user).extendVotingLock(user.address, currentLock + 500n)
+      ).to.be.revertedWithCustomError(staking, "NotAuthorized");
+    });
+
+    it("Extiende el lock si newUnlockTime es mayor", async () => {
+      const oldLock = await staking.lockedUntilVoting(user.address);
+      await staking.connect(owner).setDaoController(user2.address);
+      await staking.connect(user2).extendVotingLock(user.address, oldLock + 500n);
+      const newLock = await staking.lockedUntilVoting(user.address);
+      expect(newLock).to.equal(oldLock + 500n);
+    });
+
+    it("No reduce el lock si newUnlockTime es menor", async () => {
+      const oldLock = await staking.lockedUntilVoting(user.address);
+      await staking.connect(owner).setDaoController(user2.address);
+      await staking.connect(user2).extendVotingLock(user.address, oldLock - 10n);
+      const after = await staking.lockedUntilVoting(user.address);
+      expect(after).to.equal(oldLock);
+    });
+
+    it("Mantiene el lock si newUnlockTime == lock actual", async () => {
+      const oldLock = await staking.lockedUntilVoting(user.address);
+      await staking.connect(owner).setDaoController(user2.address);
+      await staking.connect(user2).extendVotingLock(user.address, oldLock);
+      const after = await staking.lockedUntilVoting(user.address);
+      expect(after).to.equal(oldLock);
+    });
+  });
+
 });

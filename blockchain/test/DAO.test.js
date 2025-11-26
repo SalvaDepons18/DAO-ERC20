@@ -152,6 +152,16 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
     expect(await proposalManager.lastSupport()).to.equal(true);
   });
 
+  it("vote: extiende lock de staking hasta deadline de la propuesta", async () => {
+    // Simular propuesta con deadline futuro (MockProposalManager devuelve deadline en +7 días)
+    // Lock inicial es 0 para usuario
+    const before = await staking.getVotingLockExpiry(user.address);
+    expect(before).to.equal(0);
+    await dao.connect(user).vote(123, true);
+    const after = await staking.getVotingLockExpiry(user.address);
+    expect(after).to.be.greaterThan(0);
+  });
+
   it("vote: revierte si panic", async () => {
     await panicManager.setPanic(true);
 
@@ -224,6 +234,35 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
 
     expect(await staking.lastUser()).to.equal(user.address);
     expect(await staking.lastAmount()).to.equal(100);
+  });
+
+  it("stakeForVoting: realiza solo una transferencia (no doble)", async () => {
+    // Reset markers
+    await dao.connect(user).stakeForVoting(111);
+    // En el mock, solo la primera transferFrom registra burnFrom=usuario
+    expect(await token.lastBurnFrom()).to.equal(user.address);
+    expect(await token.lastBurnAmount()).to.equal(111);
+    // No existe registro intermedio del DAO como burnFrom porque removimos segunda transferencia
+  });
+
+  it("stakeForProposing: realiza solo una transferencia (no doble)", async () => {
+    await dao.connect(user).stakeForProposing(222);
+    expect(await token.lastBurnFrom()).to.equal(user.address);
+    expect(await token.lastBurnAmount()).to.equal(222);
+  });
+
+  it("changeVote: mantiene extensión de lock si deadline mayor", async () => {
+    const before = await staking.getVotingLockExpiry(user.address);
+    await dao.connect(user).vote(321, true);
+    const afterVote = await staking.getVotingLockExpiry(user.address);
+    // Simular cambio de voto y confirmar que lock no retrocede
+    await dao.connect(user).changeVote(321, false);
+    const afterChange = await staking.getVotingLockExpiry(user.address);
+    expect(afterVote).to.be.greaterThan(0);
+    // Debido a que el mock devuelve un deadline relativo a block.timestamp
+    // cada llamada a getProposal puede incrementarlo unos segundos. Aceptamos >=.
+    expect(afterChange).to.be.greaterThanOrEqual(afterVote);
+    expect(before).to.be.lessThanOrEqual(afterVote);
   });
 
   it("stakeForVoting: revierte amount=0", async () => {
@@ -546,6 +585,30 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
       await expect(
         dao.connect(owner).expireProposal(1)
       ).to.be.reverted;
+    });
+
+    it("finalizeProposal: revierte StrategyError si estrategia falla", async () => {
+      // Deploy estrategia que revierte getTotalVotingPower
+      const FailStrategy = await ethers.getContractFactory("MockFailStrategy");
+      const failStrat = await FailStrategy.deploy();
+      // Setear como estrategia activa vía StrategyManager mock
+      // MockStrategyManager expone setActiveStrategy sin ownership en mock
+      const StrategyMgr = await ethers.getContractFactory("MockStrategyManager");
+      const mgr = await StrategyMgr.deploy();
+      await mgr.setActiveStrategy(failStrat.target);
+      // Reemplazar en DAO el strategyManager por el mock fallido
+      // (direct assignment no posible; redeploy DAO para test puntual)
+      const NewDAO = await ethers.getContractFactory("DAO");
+      const dao2 = await NewDAO.deploy(
+        owner.address,
+        token.target,
+        staking.target,
+        proposalManager.target,
+        mgr.target,
+        parameters.target,
+        panicManager.target
+      );
+      await expect(dao2.connect(owner).finalizeProposal(1)).to.be.revertedWithCustomError(dao2, "StrategyError");
     });
   });
 });

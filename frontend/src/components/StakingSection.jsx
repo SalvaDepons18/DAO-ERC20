@@ -435,7 +435,7 @@ export default function StakingSection({ onTransactionSuccess }) {
             </div>
           </form>
           <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>
-            ℹ️ Mínimo: 10 tokens
+            {paramsLoading ? 'Cargando parámetros...' : (params && `ℹ️ Mínimo actual: ${params.minStakeVoting} tokens`)}
           </p>
           <p style={{ fontSize: '0.9em', color: '#666', marginTop: '4px' }}>
             🗳️ Poder de voto actual: <strong>{votingPower}</strong>
@@ -482,7 +482,7 @@ export default function StakingSection({ onTransactionSuccess }) {
             </div>
           </form>
           <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>
-            ℹ️ Mínimo: 50 tokens
+            {paramsLoading ? 'Cargando parámetros...' : (params && `ℹ️ Mínimo actual: ${params.minStakeProposing} tokens`)}
           </p>
           <div className="current-stake">
             <p>Stake actual: <strong>{currentProposingStake} SHA</strong></p>

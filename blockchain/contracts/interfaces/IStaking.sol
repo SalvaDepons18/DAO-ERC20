@@ -16,4 +16,7 @@ interface IStaking {
     function setVotingLock(uint256 newLock) external;
     function setProposingLock(uint256 newLock) external;
     function setParameters(address newParameters) external;
+    // Newly added for lock extension on vote
+    function extendVotingLock(address user, uint256 newUnlockTime) external;
+    function getVotingLockExpiry(address user) external view returns (uint256);
 }

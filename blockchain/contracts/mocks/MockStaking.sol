@@ -40,4 +40,15 @@ contract MockStaking {
     function setCurrentUser(address user) external {
         currentUser = user;
     }
+
+    // Added to satisfy extended IStaking interface in tests
+    mapping(address => uint256) public votingLockExpiry;
+    function extendVotingLock(address user, uint256 newUnlockTime) external {
+        if (newUnlockTime > votingLockExpiry[user]) {
+            votingLockExpiry[user] = newUnlockTime;
+        }
+    }
+    function getVotingLockExpiry(address user) external view returns (uint256) {
+        return votingLockExpiry[user];
+    }
 }

@@ -41,6 +41,11 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
     uint256 public totalVotingStaked;
     uint256 public totalProposalStaked;
 
+    // DAO controller authorized to extend locks
+    address public daoController;
+
+    error NotAuthorized();
+
     // Eventos
     event StakedForVoting(address indexed user, uint256 amount, uint256 lockedUntil);
     event StakedForProposing(address indexed user, uint256 amount, uint256 lockedUntil);
@@ -58,6 +63,12 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
 
         token = IERC20(_token);
         parameters = IParameters(_parameters);
+    }
+
+    // Set DAO controller (can be DAO contract) to allow lock extension
+    function setDaoController(address _dao) external onlyOwner {
+        if (_dao == address(0)) revert InvalidAddress();
+        daoController = _dao;
     }
 
     // -------------------------------------------------------------------------
@@ -150,6 +161,17 @@ contract Staking is ReentrancyGuard, Ownable, IStaking {
 
     function getProposingStake(address user) external view returns (uint256) {
         return proposalStake[user];
+    }
+
+    function getVotingLockExpiry(address user) external view returns (uint256) {
+        return lockedUntilVoting[user];
+    }
+
+    function extendVotingLock(address user, uint256 newUnlockTime) external {
+        if (msg.sender != daoController) revert NotAuthorized();
+        if (newUnlockTime > lockedUntilVoting[user]) {
+            lockedUntilVoting[user] = newUnlockTime;
+        }
     }
 
     // -------------------------------------------------------------------------

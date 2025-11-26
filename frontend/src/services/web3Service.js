@@ -362,7 +362,14 @@ export const getProposingStake = async (address) => {
 export const getProposal = async (proposalId) => {
   const dao = await getDAOContract(true);
   const proposal = await dao.getProposal(proposalId);
-  return proposal;
+  // Enhance with decoded state
+  const rawState = Number(proposal.state);
+  const states = ["ACTIVE", "ACCEPTED", "REJECTED", "EXPIRED"];
+  return {
+    ...proposal,
+    rawState,
+    stateName: states[rawState] || "UNKNOWN"
+  };
 };
 
 export const getProposalCount = async () => {
