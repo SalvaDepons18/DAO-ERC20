@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { vote, changeVote, getUserVote, hasUserVoted, getSigner } from '../services/web3Service';
+import { vote, changeVote, getUserVote, hasUserVoted, getSigner, getVotingPower, getVotingStake } from '../services/web3Service';
 import useParameters from '../hooks/useParameters';
 import { decodeRevert } from '../utils/decodeRevert';
 
-export default function VotingPanel({ proposalId }) {
+export default function VotingPanel({ proposalId, onVoteSuccess }) {
   const [userVote, setUserVote] = useState('NONE');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [userVotingPower, setUserVotingPower] = useState(null);
   const { params, loading: paramsLoading, error: paramsError } = useParameters();
 
   const refreshVoteState = async () => {
@@ -22,6 +23,10 @@ export default function VotingPanel({ proposalId }) {
       } else {
         setUserVote('NONE');
       }
+      // Obtener poder de voto y stake actual
+      const vp = await getVotingPower(addr);
+      const vs = await getVotingStake(addr);
+      setUserVotingPower({ power: vp, stake: vs });
     } catch (e) {
       console.warn('No se pudo obtener voto:', e.message);
     }
@@ -35,11 +40,28 @@ export default function VotingPanel({ proposalId }) {
       const support = voteType === 'FOR';
       const receipt = await vote(proposalId, support);
       const txHash = receipt.hash || receipt.transactionHash;
-      setSuccess(`✅ Voto registrado. Tx: ${txHash}`);
+      setSuccess(`Voto registrado. Tx: ${txHash}`);
       await refreshVoteState();
+      if (onVoteSuccess) onVoteSuccess();
     } catch (e) {
       const decoded = decodeRevert(e);
-      setError(decoded);
+      if (decoded === 'MinStakeNotMet' || decoded === 'InsufficientStake') {
+        const minStake = params ? params.minStakeVoting : 'requerido';
+        setError(`No tienes suficientes tokens stakeados para votar. Mínimo requerido: ${minStake} tokens. Ve a la sección de Staking para stakear más tokens.`);
+      } else if (decoded === 'InvalidVoteType') {
+        const minStake = params ? params.minStakeVoting : 'requerido';
+        const currentStake = userVotingPower ? userVotingPower.stake : '0';
+        const currentPower = userVotingPower ? userVotingPower.power : '0';
+        setError(`No tienes poder de voto (actual: ${currentPower}). Tu stake de voting: ${currentStake} tokens. Mínimo requerido: ${minStake} tokens. Ve a la sección de Staking y stakea en "Staking para Votar".`);
+      } else if (decoded === 'ProposalNotActive') {
+        setError('No se puede votar en propuestas finalizadas. Esta propuesta ya no está activa.');
+      } else if (decoded === 'ProposalDeadlinePassed') {
+        setError('El plazo para votar ha expirado. Esta propuesta debe ser finalizada.');
+      } else if (/user (rejected|denied)/i.test(e.message || '')) {
+        setError('Transacción rechazada por el usuario.');
+      } else {
+        setError(decoded);
+      }
     } finally { setLoading(false); }
   };
 
@@ -51,9 +73,26 @@ export default function VotingPanel({ proposalId }) {
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Voto actualizado. Tx: ${txHash}`);
       await refreshVoteState();
+      if (onVoteSuccess) onVoteSuccess();
     } catch (e) {
       const decoded = decodeRevert(e);
-      setError(decoded);
+      if (decoded === 'MinStakeNotMet' || decoded === 'InsufficientStake') {
+        const minStake = params ? params.minStakeVoting : 'requerido';
+        setError(`No tienes suficientes tokens stakeados para votar. Mínimo requerido: ${minStake} tokens. Ve a la sección de Staking para stakear más tokens.`);
+      } else if (decoded === 'InvalidVoteType') {
+        const minStake = params ? params.minStakeVoting : 'requerido';
+        const currentStake = userVotingPower ? userVotingPower.stake : '0';
+        const currentPower = userVotingPower ? userVotingPower.power : '0';
+        setError(`No tienes poder de voto (actual: ${currentPower}). Tu stake de voting: ${currentStake} tokens. Mínimo requerido: ${minStake} tokens. Ve a la sección de Staking y stakea en "Staking para Votar".`);
+      } else if (decoded === 'ProposalNotActive') {
+        setError('No se puede cambiar el voto en propuestas finalizadas. Esta propuesta ya no está activa.');
+      } else if (decoded === 'ProposalDeadlinePassed') {
+        setError('El plazo para cambiar el voto ha expirado. Esta propuesta debe ser finalizada.');
+      } else if (/user (rejected|denied)/i.test(e.message || '')) {
+        setError('Transacción rechazada por el usuario.');
+      } else {
+        setError(decoded);
+      }
     } finally { setLoading(false); }
   };
 
@@ -68,7 +107,7 @@ export default function VotingPanel({ proposalId }) {
       {params && <p style={{ fontSize: '0.75em', color: '#666', marginTop: '-4px' }}>Mínimo stake para votar: {params.minStakeVoting} tokens</p>}
       {hasVoted ? (
         <>
-          <p className="vote-status">Ya has votado: <strong>{userVote === 'FOR' ? '✅ A Favor' : '❌ En Contra'}</strong></p>
+          <p className="vote-status">Ya has votado: <strong>{userVote === 'FOR' ? 'A Favor' : 'En Contra'}</strong></p>
           <div className="change-vote-buttons">
             <button className="btn btn-secondary" onClick={() => handleChangeVote('FOR')} disabled={loading || userVote === 'FOR'}>Cambiar a A Favor</button>
             <button className="btn btn-secondary" onClick={() => handleChangeVote('AGAINST')} disabled={loading || userVote === 'AGAINST'}>Cambiar a En Contra</button>
@@ -76,8 +115,8 @@ export default function VotingPanel({ proposalId }) {
         </>
       ) : (
         <div className="vote-buttons">
-          <button className="btn btn-success" onClick={() => handleVote('FOR')} disabled={loading}>✅ Votar A Favor</button>
-          <button className="btn btn-danger" onClick={() => handleVote('AGAINST')} disabled={loading}>❌ Votar En Contra</button>
+          <button className="btn btn-success" onClick={() => handleVote('FOR')} disabled={loading}>Votar A Favor</button>
+          <button className="btn btn-danger" onClick={() => handleVote('AGAINST')} disabled={loading}>Votar En Contra</button>
         </div>
       )}
     </div>

@@ -98,14 +98,11 @@ contract DAO {
     {
         if (bytes(_title).length == 0 || bytes(_description).length == 0) revert EmptyString();
 
-        // Try to set the creator for the mock (if it has the function)
-        try IMockProposalManager(address(proposalManager)).setCurrentCreator(msg.sender) {} catch {}
-
         // Use proposing stake as the power required to create proposals
         uint256 proposingStake = staking.getProposingStake(msg.sender);
         uint256 minPropose = parameters.minStakeForProposing();
         if (proposingStake < minPropose) revert MinStakeNotMet();
-        return proposalManager.createProposal(_title, _description, proposingStake);
+        return proposalManager.createProposal(msg.sender, _title, _description, proposingStake);
     }
 
     function vote(uint256 _proposalId, bool _support)
@@ -131,7 +128,7 @@ contract DAO {
         // Try to set the voter for the mock (if it has the function)
         try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
         
-        proposalManager.vote(_proposalId, voteType);
+        proposalManager.vote(msg.sender, _proposalId, voteType);
     }
 
     function changeVote(uint256 _proposalId, bool _support)
@@ -153,7 +150,7 @@ contract DAO {
         // Try to set the voter for the mock (if it has the function)
         try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
 
-        proposalManager.changeVote(_proposalId, newVoteType);
+        proposalManager.changeVote(msg.sender, _proposalId, newVoteType);
     }
 
     function stakeForVoting(uint256 _amount) external notInPanic {

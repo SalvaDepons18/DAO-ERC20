@@ -1,16 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import VotingPanel from './VotingPanel';
-import { finalizeProposal, expireProposal, isPanicked } from '../services/web3Service';
+import { finalizeProposal, expireProposal, isPanicked, getProposal } from '../services/web3Service';
 import { decodeRevert } from '../utils/decodeRevert';
 
-export default function ProposalDetail({ proposal, onClose }) {
+export default function ProposalDetail({ proposal: initialProposal, onClose, onProposalUpdated }) {
+  const [proposal, setProposal] = useState(initialProposal);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [panicked, setPanicked] = useState(false);
 
   // quick check panic state (non-blocking UI init)
-  isPanicked().then(setPanicked).catch(() => setPanicked(false));
+  useEffect(() => {
+    isPanicked().then(setPanicked).catch(() => setPanicked(false));
+  }, []);
+
+  const refreshProposal = async () => {
+    try {
+      const updated = await getProposal(proposal.id);
+      setProposal(updated);
+    } catch (e) {
+      console.error('Error refreshing proposal:', e);
+    }
+  };
+
   // Normalize seconds/ms to milliseconds
   const toMs = (val) => {
     const n = typeof val === 'bigint' ? Number(val) : Number(val);
@@ -50,6 +63,10 @@ export default function ProposalDetail({ proposal, onClose }) {
       const receipt = await finalizeProposal(proposal.id);
       const hash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Propuesta finalizada. Tx: ${hash}`);
+      // Notificar al padre para actualizar la lista
+      if (onProposalUpdated) {
+        setTimeout(() => onProposalUpdated(), 1500);
+      }
     } catch (e) {
       setError(`❌ ${decodeRevert(e)}`);
     } finally { setLoading(false); }
@@ -61,6 +78,10 @@ export default function ProposalDetail({ proposal, onClose }) {
       const receipt = await expireProposal(proposal.id);
       const hash = receipt.hash || receipt.transactionHash;
       setSuccess(`✅ Propuesta expirada. Tx: ${hash}`);
+      // Notificar al padre para actualizar la lista
+      if (onProposalUpdated) {
+        setTimeout(() => onProposalUpdated(), 1500);
+      }
     } catch (e) {
       setError(`❌ ${decodeRevert(e)}`);
     } finally { setLoading(false); }
@@ -129,7 +150,7 @@ export default function ProposalDetail({ proposal, onClose }) {
           </div>
 
           {proposal.stateName === 'ACTIVE' && (
-            <VotingPanel proposalId={proposal.id} />
+            <VotingPanel proposalId={proposal.id} onVoteSuccess={refreshProposal} />
           )}
 
           {proposal.stateName !== 'ACTIVE' && (

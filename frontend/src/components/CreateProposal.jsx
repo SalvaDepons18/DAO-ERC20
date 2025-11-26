@@ -25,10 +25,10 @@ export default function CreateProposal({ onTransactionSuccess }) {
     } catch (e) {
       const decoded = decodeRevert(e);
       if (decoded === 'DuplicateProposal') {
-        setError('⚠️ Propuesta duplicada. Ya existe otra igual.');
+        setError('Propuesta duplicada. Ya existe otra igual.');
       } else if (decoded === 'InsufficientProposingStake' || decoded === 'MinStakeNotMet') {
-        const dyn = params ? params.minStakeProposing : 'mínimo';
-        setError(`⚠️ Stake insuficiente para proponer. Mínimo: ${dyn} tokens.`);
+        const minStake = params ? params.minStakeProposing : 'mínimo';
+        setError(`No tienes suficientes tokens stakeados para crear propuestas. Mínimo requerido: ${minStake} tokens. Ve a la sección de Staking para stakear tokens.`);
       } else if (/user (rejected|denied)/i.test(e.message || '')) {
         setError('Transacción rechazada por el usuario.');
       } else {

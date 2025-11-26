@@ -113,7 +113,7 @@ export default function StakingSection({ onTransactionSuccess }) {
       const d = decodeRevert(e);
       if (d === 'StakeLocked' || d === 'InsufficientStake') {
         const lockMsg = params ? (params.lockTimeDays > 0 ? `${params.lockTimeDays} días` : `${params.lockTimeSeconds} segundos`) : 'el periodo de bloqueo';
-        setError(`⚠️ Tu stake todavía está bloqueado. Debes esperar ${lockMsg}.`);
+        setError(`Tu stake todavía está bloqueado. Debes esperar ${lockMsg}.`);
       } else if (/user (rejected|denied)/i.test(e.message||'')) setError('❌ Transacción rechazada por el usuario.');
       else setError(`❌ ${d}`);
     } finally { setLoading(false); }

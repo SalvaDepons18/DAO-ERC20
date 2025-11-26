@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ProposalDetail from './ProposalDetail';
 
-export default function ProposalCard({ proposal }) {
+export default function ProposalCard({ proposal, onProposalUpdated }) {
   const [showDetail, setShowDetail] = useState(false);
 
   const getStateLabel = (state) => {
@@ -65,7 +65,11 @@ export default function ProposalCard({ proposal }) {
       {showDetail && (
         <ProposalDetail 
           proposal={proposal} 
-          onClose={() => setShowDetail(false)} 
+          onClose={() => setShowDetail(false)}
+          onProposalUpdated={() => {
+            setShowDetail(false);
+            if (onProposalUpdated) onProposalUpdated();
+          }}
         />
       )}
     </>

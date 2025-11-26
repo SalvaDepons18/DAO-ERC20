@@ -18,10 +18,10 @@ interface IProposalManager {
         address strategyUsed;
     }
 
-    function createProposal(string calldata _title, string calldata _description, uint256 _votingPower) external returns (uint256);
+    function createProposal(address _proposer, string calldata _title, string calldata _description, uint256 _votingPower) external returns (uint256);
     function proposalCount() external view returns (uint256);
-    function vote(uint256 _proposalId, VoteType _voteType) external;
-    function changeVote(uint256 _proposalId, VoteType _newVoteType) external;
+    function vote(address _voter, uint256 _proposalId, VoteType _voteType) external;
+    function changeVote(address _voter, uint256 _proposalId, VoteType _newVoteType) external;
     function finalizeProposal(uint256 _proposalId, uint256 _totalVotingPower) external;
     function expireProposal(uint256 _proposalId) external;
     function getProposal(uint256 _proposalId) external view returns (Proposal memory);

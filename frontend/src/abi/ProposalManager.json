@@ -265,6 +265,11 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "_voter",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
           "name": "_proposalId",
           "type": "uint256"
@@ -282,6 +287,11 @@
     },
     {
       "inputs": [
+        {
+          "internalType": "address",
+          "name": "_proposer",
+          "type": "address"
+        },
         {
           "internalType": "string",
           "name": "_title",
@@ -791,6 +801,11 @@
     },
     {
       "inputs": [
+        {
+          "internalType": "address",
+          "name": "_voter",
+          "type": "address"
+        },
         {
           "internalType": "uint256",
           "name": "_proposalId",

@@ -45,12 +45,20 @@ contract SimpleMajorityStrategy is IVotingStrategy {
         if (user == address(0)) revert InvalidAddress();
         
         uint256 userStake = staking.getVotingStake(user);
-        uint256 tokensPerVP = parameters.tokensPerVotingPower();
         
-        if (tokensPerVP == 0) {
+        // If no stake, no voting power
+        if (userStake == 0) {
             return 0;
         }
         
+        uint256 tokensPerVP = parameters.tokensPerVotingPower();
+        
+        // If tokensPerVP is 0 or not set, default to 1 token = 1 voting power
+        if (tokensPerVP == 0) {
+            return userStake / 1e18; // Convert wei to tokens
+        }
+        
+        // Normal calculation: divide stake by tokensPerVP (both in wei)
         votingPower = userStake / tokensPerVP;
         
         return votingPower;

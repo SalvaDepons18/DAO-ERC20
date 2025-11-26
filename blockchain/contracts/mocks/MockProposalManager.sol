@@ -44,26 +44,26 @@ contract MockProposalManager {
     address public currentVoter;
     address public currentCreator;
 
-    function createProposal(string calldata _title, string calldata _description, uint256 /* _votingPower */)
+    function createProposal(address _proposer, string calldata _title, string calldata _description, uint256 /* _votingPower */)
         external
         returns (uint256)
     {
-        lastCreator = currentCreator;
+        lastCreator = _proposer;
         lastTitle = _title;
         lastDescription = _description;
         proposalCount += 1;
         return nextId++;
     }
 
-    function vote(uint256 _proposalId, IProposalManager.VoteType _voteType) external {
+    function vote(address _voter, uint256 _proposalId, IProposalManager.VoteType _voteType) external {
         lastVoteProposal = _proposalId;
-        lastVoteUser = currentVoter;
+        lastVoteUser = _voter;
         lastSupport = _voteType == IProposalManager.VoteType.FOR;
     }
 
-    function changeVote(uint256 _proposalId, IProposalManager.VoteType _newVoteType) external {
+    function changeVote(address _voter, uint256 _proposalId, IProposalManager.VoteType _newVoteType) external {
         lastChangeProposal = _proposalId;
-        lastChangeUser = currentVoter;
+        lastChangeUser = _voter;
         lastChangeSupport = _newVoteType == IProposalManager.VoteType.FOR;
     }
     

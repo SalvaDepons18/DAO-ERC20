@@ -144,6 +144,7 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
      * @return proposalId ID de la nueva propuesta
      */
     function createProposal(
+        address _proposer,
         string calldata _title,
         string calldata _description,
         uint256 _votingPower
@@ -170,7 +171,7 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         proposals[proposalId] = Proposal({
             title: _title,
             description: _description,
-            proposer: msg.sender,
+            proposer: _proposer,
             createdAt: block.timestamp,
             deadline: deadline,
             votesFor: 0,
@@ -179,7 +180,7 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
             strategyUsed: address(0)
         });
 
-        emit ProposalCreated(proposalId, msg.sender, _title, deadline);
+        emit ProposalCreated(proposalId, _proposer, _title, deadline);
         return proposalId;
     }
 
@@ -189,10 +190,12 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
 
     /**
      * @dev Emite un voto en una propuesta
+     * @param _voter Address of the voter
      * @param _voteType Tipo de voto (FOR o AGAINST)
      * El peso se calcula internamente usando la estrategia activa
      */
     function vote(
+        address _voter,
         uint256 _proposalId,
         VoteType _voteType
     ) external nonReentrant {
@@ -203,21 +206,21 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         if (proposal.state != ProposalState.ACTIVE) revert ProposalNotActive();
         if (block.timestamp > proposal.deadline) revert ProposalDeadlinePassed();
         if (_voteType == VoteType.NONE) revert InvalidVoteType();
-        if (votes[_proposalId][msg.sender] != VoteType.NONE) revert AlreadyVoted();
+        if (votes[_proposalId][_voter] != VoteType.NONE) revert AlreadyVoted();
 
         // Obtener estrategia activa y calcular poder actual
         IVotingStrategy active = address(strategyManager) != address(0)
             ? strategyManager.getActiveStrategy()
             : votingStrategy;
-        uint256 currentWeight = active.calculateVotingPower(msg.sender);
+        uint256 currentWeight = active.calculateVotingPower(_voter);
         if (currentWeight == 0) revert InvalidVoteType();
 
         // Snapshot: registrar peso sólo en primer voto
-        voteWeightUsed[_proposalId][msg.sender] = currentWeight;
+        voteWeightUsed[_proposalId][_voter] = currentWeight;
         uint256 _votingWeight = currentWeight;
 
         // Registrar voto
-        votes[_proposalId][msg.sender] = _voteType;
+        votes[_proposalId][_voter] = _voteType;
 
         // Contar votos
         if (_voteType == VoteType.FOR) {
@@ -226,16 +229,18 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
             proposal.votesAgainst += _votingWeight;
         }
 
-        emit VoteCasted(_proposalId, msg.sender, _voteType, _votingWeight);
+        emit VoteCasted(_proposalId, _voter, _voteType, _votingWeight);
     }
 
     /**
      * @dev Permite cambiar el voto de un usuario (si aún está en fase ACTIVE)
+     * @param _voter Address of the voter
      * @param _proposalId ID de la propuesta
      * @param _newVoteType Nuevo tipo de voto
      * El peso se calcula internamente usando la estrategia activa
      */
     function changeVote(
+        address _voter,
         uint256 _proposalId,
         VoteType _newVoteType
     ) external nonReentrant {
@@ -247,11 +252,11 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         if (block.timestamp > proposal.deadline) revert ProposalDeadlinePassed();
         if (_newVoteType == VoteType.NONE) revert InvalidVoteType();
 
-        VoteType currentVote = votes[_proposalId][msg.sender];
+        VoteType currentVote = votes[_proposalId][_voter];
         if (currentVote == VoteType.NONE) revert NotVotedYet();
 
         // Usar siempre el peso snapshot original
-        uint256 _votingWeight = voteWeightUsed[_proposalId][msg.sender];
+        uint256 _votingWeight = voteWeightUsed[_proposalId][_voter];
         if (_votingWeight == 0) revert InvalidVoteType();
 
         // Restar voto anterior
@@ -262,14 +267,14 @@ contract ProposalManager is ReentrancyGuard, Ownable, IProposalManager {
         }
 
         // Sumar nuevo voto
-        votes[_proposalId][msg.sender] = _newVoteType;
+        votes[_proposalId][_voter] = _newVoteType;
         if (_newVoteType == VoteType.FOR) {
             proposal.votesFor += _votingWeight;
         } else if (_newVoteType == VoteType.AGAINST) {
             proposal.votesAgainst += _votingWeight;
         }
 
-        emit VoteCasted(_proposalId, msg.sender, _newVoteType, _votingWeight);
+        emit VoteCasted(_proposalId, _voter, _newVoteType, _votingWeight);
     }
 
     // -------------------------------------------------------------------------

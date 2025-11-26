@@ -461,7 +461,7 @@ export const getStakingLockTime = async () => {
 export const getVotingPower = async (address) => {
   const dao = await getDAOContract(true);
   const vp = await dao.getVotingPower(address);
-  return vp.toString();
+  return vp.toString(); // Voting power is already a simple number, not in wei
 };
 
 // ====== User Vote State (on-chain) ======

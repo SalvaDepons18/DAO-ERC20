@@ -101,6 +101,7 @@ describe("ProposalManager", function () {
 
   it("Debe crear una propuesta correctamente", async () => {
     const tx = await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description of test proposal",
       MIN_VOTING_POWER
@@ -121,6 +122,7 @@ describe("ProposalManager", function () {
   it("Debe rechazar propuesta sin poder de voto suficiente", async () => {
     await expect(
       proposalManager.connect(proposer).createProposal(
+        proposer.address,
         "Test Proposal",
         "Description",
         MIN_VOTING_POWER - 1
@@ -130,19 +132,20 @@ describe("ProposalManager", function () {
 
   it("Debe rechazar propuesta con título vacío", async () => {
     await expect(
-      proposalManager.connect(proposer).createProposal("", "Description", MIN_VOTING_POWER)
+      proposalManager.connect(proposer).createProposal(proposer.address, "", "Description", MIN_VOTING_POWER)
     ).to.be.revertedWithCustomError(proposalManager, "EmptyTitle");
   });
 
   it("Debe rechazar propuesta sin descripción", async () => {
     await expect(
-      proposalManager.connect(proposer).createProposal("Title", "", MIN_VOTING_POWER)
+      proposalManager.connect(proposer).createProposal(proposer.address, "Title", "", MIN_VOTING_POWER)
     ).to.be.revertedWithCustomError(proposalManager, "EmptyDescription");
   });
 
   it("Emite evento ProposalCreated", async () => {
     await expect(
       proposalManager.connect(proposer).createProposal(
+        proposer.address,
         "Test Proposal",
         "Description",
         MIN_VOTING_POWER
@@ -157,6 +160,7 @@ describe("ProposalManager", function () {
     await dummyParams.setProposalDuration(123);
 
     const tx = await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Deadline Param Test",
       "Desc",
       MIN_VOTING_POWER
@@ -174,6 +178,7 @@ describe("ProposalManager", function () {
 
   it("Un usuario puede votar en una propuesta activa", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -181,7 +186,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
 
     const [votesFor, votesAgainst] = await proposalManager.getProposalResults(0);
     expect(votesFor).to.equal(6000);
@@ -190,6 +195,7 @@ describe("ProposalManager", function () {
 
   it("Emite evento VoteCasted", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -198,7 +204,7 @@ describe("ProposalManager", function () {
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.FOR)
+        .vote(voter1.address, 0, VoteType.FOR)
     )
       .to.emit(proposalManager, "VoteCasted")
       .withArgs(0, voter1.address, VoteType.FOR, 6000);
@@ -208,18 +214,20 @@ describe("ProposalManager", function () {
 
   it("Debe rechazar voto de tipo NONE", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
     );
 
     await expect(
-      proposalManager.connect(voter1).vote(0, VoteType.NONE)
+      proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.NONE)
     ).to.be.revertedWithCustomError(proposalManager, "InvalidVoteType");
   });
 
   it("Debe evitar que una persona vote dos veces", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -227,17 +235,18 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
 
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.AGAINST)
+        .vote(voter1.address, 0, VoteType.AGAINST)
     ).to.be.revertedWithCustomError(proposalManager, "AlreadyVoted");
   });
 
   it("Debe permitir cambiar el voto antes del deadline", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -246,12 +255,12 @@ describe("ProposalManager", function () {
     // Primer voto: FOR
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
 
     // Cambiar a AGAINST
     await proposalManager
       .connect(voter1)
-      .changeVote(0, VoteType.AGAINST);
+      .changeVote(voter1.address, 0, VoteType.AGAINST);
 
     const [votesFor, votesAgainst] = await proposalManager.getProposalResults(0);
     expect(votesFor).to.equal(0);
@@ -261,13 +270,14 @@ describe("ProposalManager", function () {
   it("Snapshot: aumentar stake tras votar y changeVote no altera peso", async () => {
     // Crear propuesta
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Snapshot Test",
       "Desc",
       MIN_VOTING_POWER
     );
 
     // voter3 (1000 stake) vota FOR
-    await proposalManager.connect(voter3).vote(0, VoteType.FOR);
+    await proposalManager.connect(voter3).vote(voter3.address, 0, VoteType.FOR);
     let results = await proposalManager.getProposalResults(0);
     expect(results[0]).to.equal(1000);
     expect(results[1]).to.equal(0);
@@ -278,7 +288,7 @@ describe("ProposalManager", function () {
     await staking.connect(voter3).stakeForVoting(ethers.parseEther("4000"));
 
     // Cambiar voto a AGAINST
-    await proposalManager.connect(voter3).changeVote(0, VoteType.AGAINST);
+    await proposalManager.connect(voter3).changeVote(voter3.address, 0, VoteType.AGAINST);
     results = await proposalManager.getProposalResults(0);
     // Debe haber restado 1000 y sumado 1000 (no 5000)
     expect(results[0]).to.equal(0);
@@ -287,6 +297,7 @@ describe("ProposalManager", function () {
 
   it("Debe rechazar voto después del deadline", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -299,12 +310,13 @@ describe("ProposalManager", function () {
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.FOR)
+        .vote(voter1.address, 0, VoteType.FOR)
     ).to.be.revertedWithCustomError(proposalManager, "ProposalDeadlinePassed");
   });
 
   it("Debe rechazar voto en propuesta no activa", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -316,7 +328,7 @@ describe("ProposalManager", function () {
     await expect(
       proposalManager
         .connect(voter1)
-        .vote(0, VoteType.FOR)
+        .vote(voter1.address, 0, VoteType.FOR)
     ).to.be.revertedWithCustomError(proposalManager, "ProposalNotActive");
   });
 
@@ -326,6 +338,7 @@ describe("ProposalManager", function () {
 
   it("Debe finalizar propuesta como ACCEPTED con mayoría de votos FOR", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -334,15 +347,15 @@ describe("ProposalManager", function () {
     // Votos a favor
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
     await proposalManager
       .connect(voter2)
-      .vote(0, VoteType.FOR);
+      .vote(voter2.address, 0, VoteType.FOR);
 
     // Votos en contra
     await proposalManager
       .connect(voter3)
-      .vote(0, VoteType.AGAINST);
+      .vote(voter3.address, 0, VoteType.AGAINST);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 
@@ -352,6 +365,7 @@ describe("ProposalManager", function () {
 
   it("Debe finalizar propuesta como REJECTED sin mayoría de votos FOR", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -360,15 +374,15 @@ describe("ProposalManager", function () {
     // voter2 vota a favor (3000)
     await proposalManager
       .connect(voter2)
-      .vote(0, VoteType.FOR);
+      .vote(voter2.address, 0, VoteType.FOR);
 
     // voter1 y voter3 votan en contra (6000 + 1000 = 7000)
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.AGAINST);
+      .vote(voter1.address, 0, VoteType.AGAINST);
     await proposalManager
       .connect(voter3)
-      .vote(0, VoteType.AGAINST);
+      .vote(voter3.address, 0, VoteType.AGAINST);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 
@@ -378,6 +392,7 @@ describe("ProposalManager", function () {
 
   it("Debe expirar propuesta automáticamente si está vencida", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -395,6 +410,7 @@ describe("ProposalManager", function () {
 
   it("Debe permitir expirar manualmente una propuesta vencida", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -412,6 +428,7 @@ describe("ProposalManager", function () {
 
   it("Emite evento ProposalStateChanged", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -419,7 +436,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
 
     await expect(proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER))
       .to.emit(proposalManager, "ProposalStateChanged")
@@ -432,6 +449,7 @@ describe("ProposalManager", function () {
 
   it("hasUserVoted debe retornar true si el usuario votó", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -439,7 +457,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
 
     expect(await proposalManager.hasUserVoted(0, voter1.address)).to.be.true;
     expect(await proposalManager.hasUserVoted(0, voter2.address)).to.be.false;
@@ -447,6 +465,7 @@ describe("ProposalManager", function () {
 
   it("getUserVote debe retornar el voto del usuario", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -454,7 +473,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
 
     expect(await proposalManager.getUserVote(0, voter1.address)).to.equal(
       VoteType.FOR
@@ -463,6 +482,7 @@ describe("ProposalManager", function () {
 
   it("isProposalActive debe retornar true para propuestas activas", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -477,6 +497,7 @@ describe("ProposalManager", function () {
 
   it("getProposalState debe retornar el estado actual", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -488,7 +509,7 @@ describe("ProposalManager", function () {
 
     await proposalManager
       .connect(voter1)
-      .vote(0, VoteType.FOR);
+      .vote(voter1.address, 0, VoteType.FOR);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 
@@ -499,6 +520,7 @@ describe("ProposalManager", function () {
 
   it("hasProposalDeadlinePassed debe retornar true después del deadline", async () => {
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Test Proposal",
       "Description",
       MIN_VOTING_POWER
@@ -637,14 +659,15 @@ describe("ProposalManager", function () {
 
     // Crear propuesta
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Dynamic Strategy Test",
       "Testing strategy change",
       MIN_VOTING_POWER
     );
 
     // Votar con mayoría a favor
-    await proposalManager.connect(voter1).vote(0, VoteType.FOR);
-    await proposalManager.connect(voter2).vote(0, VoteType.AGAINST);
+    await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+    await proposalManager.connect(voter2).vote(voter2.address, 0, VoteType.AGAINST);
 
     // Cambiar estrategia a una más restrictiva (aunque con SimpleMajority no cambia lógica real,
     // pero verificamos que usa la del manager)
@@ -663,12 +686,13 @@ describe("ProposalManager", function () {
   it("Debe seguir usando votingStrategy si no hay StrategyManager enlazado", async () => {
     // Crear propuesta sin enlazar StrategyManager
     await proposalManager.connect(proposer).createProposal(
+      proposer.address,
       "Fallback Strategy Test",
       "Testing fallback to votingStrategy",
       MIN_VOTING_POWER
     );
 
-    await proposalManager.connect(voter1).vote(0, VoteType.FOR);
+    await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
 
     await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
 
