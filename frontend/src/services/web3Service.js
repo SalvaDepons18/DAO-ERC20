@@ -2,12 +2,20 @@ import { ethers } from "ethers";
 import { CONTRACT_ADDRESSES, DEFAULT_CHAIN_ID } from "../config/contracts";
 
 // Importar ABIs
-import DAOAbi from "../abi/DAO.json";
-import ShaCoinAbi from "../abi/ShaCoin.json";
-import ParametersAbi from "../abi/Parameters.json";
-import StrategyManagerAbi from "../abi/StrategyManager.json";
-import PanicManagerAbi from "../abi/PanicManager.json";
-import SimpleMajorityStrategyAbi from "../abi/SimpleMajorityStrategy.json"; // may be used elsewhere; voting power now via DAO
+import DAOAbiJson from "../abi/DAO.json";
+import ShaCoinAbiJson from "../abi/ShaCoin.json";
+import ParametersAbiJson from "../abi/Parameters.json";
+import StrategyManagerAbiJson from "../abi/StrategyManager.json";
+import PanicManagerAbiJson from "../abi/PanicManager.json";
+import SimpleMajorityStrategyAbiJson from "../abi/SimpleMajorityStrategy.json"; // may be used elsewhere; voting power now via DAO
+
+// Extraer arrays de ABI desde los JSON generados por Hardhat
+const DAOAbi = DAOAbiJson.abi;
+const ShaCoinAbi = ShaCoinAbiJson.abi;
+const ParametersAbi = ParametersAbiJson.abi;
+const StrategyManagerAbi = StrategyManagerAbiJson.abi;
+const PanicManagerAbi = PanicManagerAbiJson.abi;
+const SimpleMajorityStrategyAbi = SimpleMajorityStrategyAbiJson.abi;
 
 let provider;
 let signer;
@@ -361,12 +369,21 @@ export const getProposingStake = async (address) => {
  */
 export const getProposal = async (proposalId) => {
   const dao = await getDAOContract(true);
-  const proposal = await dao.getProposal(proposalId);
-  // Enhance with decoded state
-  const rawState = Number(proposal.state);
+  const p = await dao.getProposal(proposalId);
+  // Ethers v6 devuelve un Result con propiedades no enumerables;
+  // construimos un objeto plano con los campos necesarios.
+  const rawState = Number(p.state);
   const states = ["ACTIVE", "ACCEPTED", "REJECTED", "EXPIRED"];
   return {
-    ...proposal,
+    title: p.title,
+    description: p.description,
+    proposer: p.proposer,
+    createdAt: p.createdAt,
+    deadline: p.deadline,
+    votesFor: p.votesFor,
+    votesAgainst: p.votesAgainst,
+    state: p.state,
+    strategyUsed: p.strategyUsed,
     rawState,
     stateName: states[rawState] || "UNKNOWN"
   };

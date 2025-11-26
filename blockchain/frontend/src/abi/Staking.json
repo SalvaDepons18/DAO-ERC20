@@ -32,6 +32,11 @@
       "type": "error"
     },
     {
+      "inputs": [],
+      "name": "NotAuthorized",
+      "type": "error"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -228,6 +233,37 @@
       "type": "event"
     },
     {
+      "inputs": [],
+      "name": "daoController",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "newUnlockTime",
+          "type": "uint256"
+        }
+      ],
+      "name": "extendVotingLock",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -236,6 +272,25 @@
         }
       ],
       "name": "getProposingStake",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        }
+      ],
+      "name": "getVotingLockExpiry",
       "outputs": [
         {
           "internalType": "uint256",
@@ -364,6 +419,19 @@
     {
       "inputs": [],
       "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_dao",
+          "type": "address"
+        }
+      ],
+      "name": "setDaoController",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

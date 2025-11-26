@@ -86,7 +86,11 @@ export default function ProposalList({ refreshTrigger = 0 }) {
 
   const filteredProposals = proposals.filter(p => {
     if (filter === 'ALL') return true;
-    if (filter === 'MINE') return p.proposer.toLowerCase() === userAddress;
+    if (filter === 'MINE') {
+      const proposer = (p?.proposer || '').toLowerCase();
+      const ua = (userAddress || '').toLowerCase();
+      return proposer && ua && proposer === ua;
+    }
     return p.stateName === filter;
   });
 
@@ -126,7 +130,15 @@ export default function ProposalList({ refreshTrigger = 0 }) {
           <p className="no-proposals">Cargando propuestas...</p>
         ) : filteredProposals.length === 0 ? (
           <p className="no-proposals">
-            {proposals.length === 0 ? 'No hay propuestas disponibles' : 'No hay propuestas con este filtro'}
+            {filter === 'MINE'
+              ? (!userAddress
+                  ? 'Conecta tu wallet para ver tus propuestas'
+                  : proposals.length === 0
+                    ? 'No hay propuestas disponibles'
+                    : 'No tienes propuestas creadas con la cuenta conectada')
+              : (proposals.length === 0
+                  ? 'No hay propuestas disponibles'
+                  : 'No hay propuestas con este filtro')}
           </p>
         ) : (
           filteredProposals.map(proposal => (
