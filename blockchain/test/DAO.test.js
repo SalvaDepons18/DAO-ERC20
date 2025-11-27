@@ -593,6 +593,36 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
       await expect(dao2.connect(owner).finalizeProposal(1)).to.not.be.reverted;
     });
 
+    it("finalizeProposal: ejecuta getTotalVotingPower con estrategia válida", async () => {
+      // Deploy SimpleMajorityStrategy real para cubrir la línea 250 (try success path)
+      const MockParams = await ethers.getContractFactory("MockParameters");
+      const params = await MockParams.deploy();
+      await params.setTokensPerVotingPower(ethers.parseEther("1"));
+      
+      const MockStk = await ethers.getContractFactory("MockStaking");
+      const stk = await MockStk.deploy();
+      
+      const SimpleMajority = await ethers.getContractFactory("SimpleMajorityStrategy");
+      const strategy = await SimpleMajority.deploy(stk.target, params.target);
+      
+      const StrategyMgr = await ethers.getContractFactory("MockStrategyManager");
+      const mgr = await StrategyMgr.deploy();
+      await mgr.setActiveStrategy(strategy.target);
+      
+      const NewDAO = await ethers.getContractFactory("DAO");
+      const dao2 = await NewDAO.deploy(
+        owner.address,
+        token.target,
+        staking.target,
+        proposalManager.target,
+        mgr.target,
+        parameters.target,
+        panicManager.target
+      );
+      // Esto ejecutará getTotalVotingPower() exitosamente (línea 250)
+      await expect(dao2.connect(owner).finalizeProposal(1)).to.not.be.reverted;
+    });
+
     it("expireProposal: delega correctamente con notInPanic", async () => {
       await expect(
         dao.connect(owner).expireProposal(1)
