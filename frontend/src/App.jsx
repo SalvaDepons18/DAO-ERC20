@@ -7,6 +7,7 @@ import StakingSection from "./components/StakingSection";
 import CreateProposal from "./components/CreateProposal";
 import ProposalList from "./components/ProposalList";
 import PanicBanner from './components/PanicBanner';
+import DaoStatusBadge from './components/DaoStatusBadge';
 import {
   getVotingPower,
   getProposalCount,
@@ -120,7 +121,10 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <h1>ShaCoin DAO</h1>
-          <WalletConnect />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <DaoStatusBadge />
+            <WalletConnect />
+          </div>
         </div>
       </header>
 
@@ -167,7 +171,6 @@ function App() {
                 <h3>Poder de Voto</h3>
                 <p className="big-number">{dashboardData.votingPower}</p>
                 <p style={{ fontSize: '0.8em', color: '#999' }}>Poder efectivo (estrategia)</p>
-                <PanicBanner />
               </div>
               <div className="info-card">
                 <h3>Propuestas Activas</h3>
@@ -209,6 +212,8 @@ function App() {
           </div>
         )}
       </main>
+
+      <PanicBanner />
 
       <footer className="app-footer">
         <p>ShaCoin DAO - Decentralized Autonomous Organization</p>

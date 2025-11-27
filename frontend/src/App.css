@@ -649,6 +649,74 @@ html, body, #root {
   font-size: 1.2em;
 }
 
+/* DAO Status Badge */
+.dao-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.dao-status-badge.normal {
+  background: linear-gradient(to bottom, #4a7c59 0%, #2a5c39 100%);
+  border: 2px solid #2a4c29;
+  color: #e0f0e0;
+}
+
+.dao-status-badge.panic {
+  background: linear-gradient(to bottom, #8b3a3a 0%, #6b1a1a 100%);
+  border: 2px solid #5a1a1a;
+  color: #ffe0e0;
+  animation: pulse-panic 2s ease-in-out infinite;
+}
+
+.dao-status-badge.loading {
+  background: linear-gradient(to bottom, #6b6b6b 0%, #4a4a4a 100%);
+  border: 2px solid #3a3a3a;
+  color: #e0e0e0;
+}
+
+.dao-status-badge.error {
+  background: linear-gradient(to bottom, #8b6914 0%, #6b5011 100%);
+  border: 2px solid var(--gold-dark);
+  color: var(--parchment-light);
+}
+
+.dao-status-badge .status-icon {
+  font-size: 1.2em;
+  animation: none;
+}
+
+.dao-status-badge.panic .status-icon {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+.dao-status-badge .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse-panic {
+  0%, 100% { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); }
+  50% { box-shadow: 0 2px 12px rgba(255, 0, 0, 0.6); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .app-main { padding: 1.5rem; }

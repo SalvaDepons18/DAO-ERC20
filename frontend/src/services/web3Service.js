@@ -4,18 +4,12 @@ import { CONTRACT_ADDRESSES, DEFAULT_CHAIN_ID, NETWORKS } from "../config/contra
 // Importar ABIs
 import DAOAbiJson from "../abi/DAO.json";
 import ShaCoinAbiJson from "../abi/ShaCoin.json";
-import ParametersAbiJson from "../abi/Parameters.json";
-import StrategyManagerAbiJson from "../abi/StrategyManager.json";
-import PanicManagerAbiJson from "../abi/PanicManager.json";
-import SimpleMajorityStrategyAbiJson from "../abi/SimpleMajorityStrategy.json"; // may be used elsewhere; voting power now via DAO
+// Reducir dependencias: mantener solo DAO y ShaCoin (para approvals)
 
 // Extraer arrays de ABI desde los JSON generados por Hardhat
 const DAOAbi = DAOAbiJson.abi;
 const ShaCoinAbi = ShaCoinAbiJson.abi;
-const ParametersAbi = ParametersAbiJson.abi;
-const StrategyManagerAbi = StrategyManagerAbiJson.abi;
-const PanicManagerAbi = PanicManagerAbiJson.abi;
-const SimpleMajorityStrategyAbi = SimpleMajorityStrategyAbiJson.abi;
+// Eliminados ABIs no usados directamente en el frontend
 
 let provider;
 let signer;
@@ -238,38 +232,10 @@ export const getShaCoinContract = async (isReadOnly = false) => {
   return await getContract(CONTRACT_ADDRESSES.shaCoin, ShaCoinAbi, isReadOnly);
 };
 
-/**
- * Parameters Contract
- */
-export const getParametersContract = async (isReadOnly = true) => {
-  return await getContract(CONTRACT_ADDRESSES.parameters, ParametersAbi, isReadOnly);
-};
+// Eliminados helpers de contratos no-DAO para mantener el servicio más simple
 
-
-/**
- * StrategyManager Contract
- */
-export const getStrategyManagerContract = async (isReadOnly = true) => {
-  return await getContract(CONTRACT_ADDRESSES.strategyManager, StrategyManagerAbi, isReadOnly);
-};
-
-/**
- * PanicManager Contract
- */
-export const getPanicManagerContract = async (isReadOnly = true) => {
-  return await getContract(CONTRACT_ADDRESSES.panicManager, PanicManagerAbi, isReadOnly);
-};
-
-/**
- * SimpleMajorityStrategy Contract
- */
-export const getSimpleMajorityStrategyContract = async (isReadOnly = true) => {
-  return await getContract(
-    CONTRACT_ADDRESSES.simpleMajorityStrategy,
-    SimpleMajorityStrategyAbi,
-    isReadOnly
-  );
-};
+// StrategyManager y SimpleMajorityStrategy no se usan en el frontend actual;
+// se han eliminado para mantener el servicio más limpio.
 
 // ====== DAO Functions ======
 
@@ -570,42 +536,17 @@ export const isPanicked = async () => {
 };
 
 /**
+ * Obtener el estado general del DAO (incluye si está en pánico)
+ */
+export const getDaoStatus = async () => {
+  const dao = await getDAOContract(true);
+  return await dao.isPanicked();
+};
+
+/**
  * Obtener la dirección del operador de pánico
  */
-export const getPanicOperator = async () => {
-  const panicManager = await getPanicManagerContract(true);
-  return await panicManager.panicOperator();
-};
-
-/**
- * Activar modo pánico (solo operador)
- */
-export const activatePanic = async () => {
-  await ensureReady();
-  const panicManager = await getPanicManagerContract(false);
-  const tx = await panicManager.panic();
-  return await tx.wait();
-};
-
-/**
- * Desactivar modo pánico / Calm (solo operador)
- */
-export const deactivatePanic = async () => {
-  await ensureReady();
-  const panicManager = await getPanicManagerContract(false);
-  const tx = await panicManager.calm();
-  return await tx.wait();
-};
-
-/**
- * Cambiar operador de pánico (solo DAO owner)
- */
-export const setPanicOperator = async (newOperatorAddress) => {
-  await ensureReady();
-  const panicManager = await getPanicManagerContract(false);
-  const tx = await panicManager.setPanicOperator(newOperatorAddress);
-  return await tx.wait();
-};
+// Operaciones de pánico se consultan via DAO; mutaciones se gestionan desde UI de admin si se implementa.
 
 // Central helper: which actions are DAO-gated by panic
 // isDAOAction helper ya no necesario; acciones confían en el modifier on-chain.

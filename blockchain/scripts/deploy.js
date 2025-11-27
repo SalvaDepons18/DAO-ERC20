@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 async function main() {
   console.log(" Iniciando deploy de la DAO...\n");
@@ -76,10 +77,20 @@ async function main() {
   // 7. Desplegar PanicManager
   console.log("\n Desplegando PanicManager...");
   const PanicManager = await ethers.getContractFactory("PanicManager");
-  const panicManager = await PanicManager.deploy(deployer.address, deployer.address);
+  const panicOperator = process.env.PANIC_OPERATOR && ethers.isAddress(process.env.PANIC_OPERATOR)
+    ? process.env.PANIC_OPERATOR
+    : deployer.address;
+  if (panicOperator === deployer.address) {
+    console.log(" (PANIC_OPERATOR no definido o inválido en .env, usando deployer como operador de pánico)");
+  } else {
+    console.log(" Operador de pánico (multisig) definido:", panicOperator);
+  }
+
+  const panicManager = await PanicManager.deploy(deployer.address, panicOperator);
   await panicManager.waitForDeployment();
   const panicManagerAddress = panicManager.target;
   console.log(" PanicManager desplegado en:", panicManagerAddress);
+  console.log(" Operador de pánico actual:", await panicManager.panicOperator());
 
   // 8. Desplegar DAO
   console.log("\n Desplegando DAO...");

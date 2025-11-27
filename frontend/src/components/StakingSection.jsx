@@ -39,11 +39,18 @@ export default function StakingSection({ onTransactionSuccess }) {
       const votingAmount = await getVotingStake(address);
       const proposingAmount = await getProposingStake(address);
       const vp = await getVotingPower(address);
-      const p = await isPanicked();
       setCurrentVotingStake(votingAmount);
       setCurrentProposingStake(proposingAmount);
       setVotingPower(vp.toString());
-      setPanicked(p);
+      
+      // Verificar pánico de forma opcional (puede fallar sin romper el componente)
+      try {
+        const p = await isPanicked();
+        setPanicked(p);
+      } catch (panicErr) {
+        console.warn('No se pudo verificar estado de pánico:', panicErr.message);
+        setPanicked(false);
+      }
     } catch (e) { console.error('Error cargando stakes:', e); }
   };
 

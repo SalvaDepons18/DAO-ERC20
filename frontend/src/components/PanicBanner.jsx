@@ -9,8 +9,8 @@ export default function PanicBanner() {
       try { const p = await isPanicked(); if (mounted) setPanicked(p); } catch { if (mounted) setPanicked(false); }
     };
     check();
-    const interval = setInterval(check, 15000);
-    return () => { mounted = false; clearInterval(interval); };
+    // Sin polling automático
+    return () => { mounted = false; };
   }, []);
   if (!panicked) return null;
   return (
@@ -23,7 +23,7 @@ export default function PanicBanner() {
       fontWeight: '500',
       boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
     }}>
-      🚨 La DAO está en estado de PÁNICO. Operaciones mutables revertirán hasta que se resuelva.
+      La DAO está en estado de PÁNICO. Operaciones mutables revertirán hasta que se resuelva.
     </div>
   );
 }
