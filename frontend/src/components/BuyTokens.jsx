@@ -32,20 +32,18 @@ export default function BuyTokens({ onTransactionSuccess }) {
       // El hash puede venir del receipt
       const txHash = receipt.hash || receipt.transactionHash;
       
-      setSuccess(`✅ Compra exitosa! Hash: ${txHash}`);
+      setSuccess(`Compra exitosa! Hash: ${txHash}`);
       setEthAmount('');
       
-      // Notificar al componente padre para actualizar el dashboard
       if (onTransactionSuccess) {
         onTransactionSuccess();
       }
       
     } catch (error) {
-      console.error('Error comprando tokens:', error);
       const d = decodeRevert(error);
-      if (/user (rejected|denied)/i.test(error.message||'')) setError('❌ Transacción rechazada por el usuario.');
-      else if (d === 'InsufficientETH') setError('❌ ETH insuficiente para la compra.');
-      else setError(`❌ ${d}`);
+      if (/user (rejected|denied)/i.test(error.message||'')) setError('Transacción rechazada por el usuario.');
+      else if (d === 'InsufficientETH') setError('ETH insuficiente para la compra.');
+      else setError(`Error: ${d}`);
     } finally {
       setLoading(false);
     }

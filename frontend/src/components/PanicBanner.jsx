@@ -9,7 +9,6 @@ export default function PanicBanner() {
       try { const p = await isPanicked(); if (mounted) setPanicked(p); } catch { if (mounted) setPanicked(false); }
     };
     check();
-    // Sin polling automático
     return () => { mounted = false; };
   }, []);
   if (!panicked) return null;
@@ -23,7 +22,7 @@ export default function PanicBanner() {
       fontWeight: '500',
       boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
     }}>
-      La DAO está en estado de PÁNICO. Operaciones mutables revertirán hasta que se resuelva.
+      La DAO está en estado de PÁNICO. Las operaciones están bloqueadas.
     </div>
   );
 }

@@ -21,14 +21,12 @@ export default function VotingPanel({ proposalId, onVoteSuccess }) {
         const v = await getUserVote(proposalId, addr);
         setUserVote(v);
       } else {
-        setUserVote('NONE');
+        setUserVote('NOT_VOTED');
       }
-      // Obtener poder de voto y stake actual
       const vp = await getVotingPower(addr);
       const vs = await getVotingStake(addr);
       setUserVotingPower({ power: vp, stake: vs });
     } catch (e) {
-      console.warn('No se pudo obtener voto:', e.message);
     }
   };
 
@@ -41,9 +39,7 @@ export default function VotingPanel({ proposalId, onVoteSuccess }) {
       const receipt = await vote(proposalId, support);
       const txHash = receipt.hash || receipt.transactionHash;
       setSuccess(`Voto registrado. Tx: ${txHash}`);
-      // Actualizar estado local primero
       await refreshVoteState();
-      // Notificar al padre después de un pequeño delay
       if (onVoteSuccess) {
         setTimeout(() => onVoteSuccess(), 500);
       }
@@ -75,10 +71,8 @@ export default function VotingPanel({ proposalId, onVoteSuccess }) {
       const support = newVoteType === 'FOR';
       const receipt = await changeVote(proposalId, support);
       const txHash = receipt.hash || receipt.transactionHash;
-      setSuccess(`✅ Voto actualizado. Tx: ${txHash}`);
-      // Actualizar estado local primero
+      setSuccess(`Voto actualizado. Tx: ${txHash}`);
       await refreshVoteState();
-      // Notificar al padre después de un pequeño delay
       if (onVoteSuccess) {
         setTimeout(() => onVoteSuccess(), 500);
       }

@@ -65,13 +65,11 @@ export default function ProposalList({ refreshTrigger = 0 }) {
           };
           loadedProposals.push(proposalData);
         } catch (error) {
-          console.error(`❌ Error cargando propuesta ${i}:`, error);
         }
       }
 
       setProposals(loadedProposals);
     } catch (error) {
-      console.error('Error cargando propuestas:', error);
       const d = decodeRevert(error);
       setError(`Error al cargar propuestas: ${d}`);
     } finally {

@@ -27,7 +27,6 @@ export default function ProposalDetail({ proposal: initialProposal, onClose, onP
       const updated = await getProposal(proposal.id);
       setProposal(updated);
     } catch (e) {
-      console.error('Error refreshing proposal:', e);
     }
   };
 
@@ -74,9 +73,8 @@ export default function ProposalDetail({ proposal: initialProposal, onClose, onP
     try {
       const receipt = await finalizeProposal(proposal.id);
       const hash = receipt.hash || receipt.transactionHash;
-      setSuccess(`✅ Propuesta finalizada. Tx: ${hash}`);
-      // Notificar al padre para actualizar la lista
-      if (onProposalUpdated) {
+      setSuccess(`Propuesta finalizada. Tx: ${hash}`);
+      if (onProposalUpdate) {
         setTimeout(() => onProposalUpdated(), 1500);
       }
     } catch (e) {
@@ -89,9 +87,8 @@ export default function ProposalDetail({ proposal: initialProposal, onClose, onP
     try {
       const receipt = await expireProposal(proposal.id);
       const hash = receipt.hash || receipt.transactionHash;
-      setSuccess(`✅ Propuesta expirada. Tx: ${hash}`);
-      // Notificar al padre para actualizar la lista
-      if (onProposalUpdated) {
+      setSuccess(`Propuesta expirada. Tx: ${hash}`);
+      if (onProposalUpdate) {
         setTimeout(() => onProposalUpdated(), 1500);
       }
     } catch (e) {
@@ -138,7 +135,7 @@ export default function ProposalDetail({ proposal: initialProposal, onClose, onP
             <div className="voting-stats">
               <div className="stat-bar">
                 <div className="bar-label">
-                  <span>✅ A Favor</span>
+                  <span>A Favor</span>
                   <span>{votesForNum} votos ({forPercentage}%)</span>
                 </div>
                 <div className="progress-bar">
@@ -151,7 +148,7 @@ export default function ProposalDetail({ proposal: initialProposal, onClose, onP
 
               <div className="stat-bar">
                 <div className="bar-label">
-                  <span>❌ En Contra</span>
+                  <span>En Contra</span>
                   <span>{votesAgainstNum} votos ({againstPercentage}%)</span>
                 </div>
                 <div className="progress-bar">
