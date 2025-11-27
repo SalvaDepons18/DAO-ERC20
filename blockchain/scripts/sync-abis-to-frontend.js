@@ -16,9 +16,7 @@ function copyAbis() {
   const artifactBase = path.join(__dirname, "..", "artifacts", "contracts");
 
   const dests = [
-    // blockchain embedded frontend
-    path.join(__dirname, "..", "frontend", "src", "abi"),
-    // top-level frontend
+    // top-level frontend only
     path.join(__dirname, "..", "..", "frontend", "src", "abi"),
   ];
 

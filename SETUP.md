@@ -15,30 +15,9 @@ npx hardhat compile
 
 Esto genera los ABIs en `blockchain/artifacts/contracts/`
 
-### 2. **Copiar ABIs al frontend**
+### 2. **ABIs para el frontend**
 
-Los ABIs ya han sido copiados a `frontend/src/abi/`. Si necesitas actualizarlos después de cambios:
-
-```bash
-cd /path/to/root
-node -e "
-const fs = require('fs');
-const path = require('path');
-
-const contracts = {
-  'DAO': 'blockchain/artifacts/contracts/DAO.sol/DAO.json',
-  'ShaCoin': 'blockchain/artifacts/contracts/ShaCoin.sol/ShaCoin.json',
-  // ... otros contratos
-};
-
-const abiDir = 'frontend/src/abi';
-for (const [name, filePath] of Object.entries(contracts)) {
-  const artifact = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  fs.writeFileSync(path.join(abiDir, name + '.json'), JSON.stringify(artifact.abi, null, 2));
-  console.log(name + ' ABI copiado');
-}
-"
-```
+El frontend mantiene sus ABIs en `frontend/src/abi/` y no se sincronizan automáticamente desde `blockchain`. Cuando cambies contratos, exporta manualmente los ABIs que necesites desde `blockchain/artifacts/contracts/` y colócalos en `frontend/src/abi/`.
 
 ### 3. **Desplegar los contratos**
 
@@ -218,7 +197,7 @@ REACT_APP_SHA_COIN_ADDRESS=0x...
 ## ✅ Checklist
 
 - [ ] Contratos compilados (`npm run compile` en blockchain)
-- [ ] ABIs copiados a `frontend/src/abi/`
+- [ ] ABIs actualizados en `frontend/src/abi/` según necesidad
 - [ ] Contratos desplegados
 - [ ] `.env.local` configurado con direcciones
 - [ ] Dependencias instaladas (`npm install` en frontend)

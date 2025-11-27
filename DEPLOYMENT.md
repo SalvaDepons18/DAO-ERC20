@@ -92,9 +92,10 @@ simpleMajorityStrategy: 0x1111...
 panicManager        : 0x2222...
 ```
 
-El script también:
+El script:
 - Guarda las direcciones en `blockchain/deployed-addresses.json`
-- Copia los ABIs actualizados a `frontend/src/abi/`
+  
+Nota: La copia de ABIs al frontend no se realiza automáticamente para mantener proyectos desacoplados. Si el frontend los requiere, toma los ABIs desde `blockchain/artifacts/contracts/` y colócalos en `frontend/src/abi/` manualmente.
 
 ## 🖼️ Paso 3: Configurar el Frontend
 
@@ -242,14 +243,14 @@ npx hardhat run scripts/deploy.js --network sepolia
 **Solución**: 
 1. Verifica que `.env.local` tenga las direcciones correctas
 2. Revisa la consola del navegador (F12) para errores
-3. Asegúrate de que los ABIs estén en `frontend/src/abi/`
+3. Si el frontend los requiere, coloca los ABIs en `frontend/src/abi/`
 
 ## 📁 Archivos Importantes
 
 - `blockchain/deployed-addresses.json` - Direcciones desplegadas
 - `blockchain/artifacts/` - ABIs compilados
 - `frontend/.env.local` - Variables de entorno (NO COMPARTIR)
-- `frontend/src/abi/` - ABIs copiados para el frontend
+- `frontend/src/abi/` - ABIs del frontend (se mantienen manualmente)
 
 ## 🎉 ¡Listo!
 
