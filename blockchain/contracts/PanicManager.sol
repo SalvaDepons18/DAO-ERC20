@@ -82,8 +82,6 @@ contract PanicManager is IPanicManager {
         isPanicked = false;
      }
 
-     function checkNotPanicked() external view {
-        if (isPanicked) revert PanicActive();
-     }
+     function checkNotPanicked() external view whenNotPanicked {}
 
  }

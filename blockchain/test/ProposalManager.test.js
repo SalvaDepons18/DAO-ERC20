@@ -244,7 +244,7 @@ describe("ProposalManager", function () {
     ).to.be.revertedWithCustomError(proposalManager, "AlreadyVoted");
   });
 
-  it("Debe permitir cambiar el voto antes del deadline", async () => {
+  it("Debe permitir cambiar el voto antes del deadline (FOR → AGAINST)", async () => {
     await proposalManager.connect(proposer).createProposal(
       proposer.address,
       "Test Proposal",
@@ -265,6 +265,33 @@ describe("ProposalManager", function () {
     const [votesFor, votesAgainst] = await proposalManager.getProposalResults(0);
     expect(votesFor).to.equal(0);
     expect(votesAgainst).to.equal(6000);
+  });
+
+  it("Debe permitir cambiar el voto antes del deadline (AGAINST → FOR)", async () => {
+    await proposalManager.connect(proposer).createProposal(
+      proposer.address,
+      "Test Proposal 2",
+      "Description 2",
+      MIN_VOTING_POWER
+    );
+
+    // Primer voto: AGAINST
+    await proposalManager
+      .connect(voter1)
+      .vote(voter1.address, 0, VoteType.AGAINST);
+
+    const [votesBefore1, votesBefore2] = await proposalManager.getProposalResults(0);
+    expect(votesBefore1).to.equal(0);
+    expect(votesBefore2).to.equal(6000);
+
+    // Cambiar a FOR
+    await proposalManager
+      .connect(voter1)
+      .changeVote(voter1.address, 0, VoteType.FOR);
+
+    const [votesFor, votesAgainst] = await proposalManager.getProposalResults(0);
+    expect(votesFor).to.equal(6000);
+    expect(votesAgainst).to.equal(0);
   });
 
   it("Snapshot: aumentar stake tras votar y changeVote no altera peso", async () => {
@@ -700,5 +727,402 @@ describe("ProposalManager", function () {
     expect(proposal.state).to.equal(ProposalState.ACCEPTED);
     // Debe haber usado la estrategia original (votingStrategy)
     expect(proposal.strategyUsed).to.equal(votingStrategy.target);
+  });
+
+  // -------------------------------------------------------------------------
+  // Branch Coverage - Additional Tests
+  // -------------------------------------------------------------------------
+  describe("Branch Coverage - Additional Tests", () => {
+    it("Debe revertir createProposal si título está vacío", async () => {
+      await expect(
+        proposalManager.connect(proposer).createProposal(
+          proposer.address,
+          "",
+          "Description",
+          MIN_VOTING_POWER
+        )
+      ).to.be.revertedWithCustomError(proposalManager, "EmptyTitle");
+    });
+
+    it("Debe revertir createProposal si descripción está vacía", async () => {
+      await expect(
+        proposalManager.connect(proposer).createProposal(
+          proposer.address,
+          "Title",
+          "",
+          MIN_VOTING_POWER
+        )
+      ).to.be.revertedWithCustomError(proposalManager, "EmptyDescription");
+    });
+
+    it("Debe revertir createProposal si votingPower insuficiente", async () => {
+      await expect(
+        proposalManager.connect(proposer).createProposal(
+          proposer.address,
+          "Title",
+          "Description",
+          MIN_VOTING_POWER - 1
+        )
+      ).to.be.revertedWithCustomError(proposalManager, "InsufficientVotingPower");
+    });
+
+    it("Debe revertir si propuesta duplicada", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Duplicate Test",
+        "Same description",
+        MIN_VOTING_POWER
+      );
+
+      await expect(
+        proposalManager.connect(proposer).createProposal(
+          proposer.address,
+          "Duplicate Test",
+          "Same description",
+          MIN_VOTING_POWER
+        )
+      ).to.be.revertedWithCustomError(proposalManager, "DuplicateProposal");
+    });
+
+    it("Debe usar proposalDuration de parametersContract cuando != 0", async () => {
+      const customDuration = 7200; // 2 horas
+      await dummyParams.setProposalDuration(customDuration);
+
+      // Conectar parametersContract
+      await proposalManager.setParameters(dummyParams.target);
+
+      const tx = await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Custom Duration Test",
+        "Testing custom duration",
+        MIN_VOTING_POWER
+      );
+      const block = await ethers.provider.getBlock(tx.blockNumber);
+
+      const proposal = await proposalManager.getProposal(0);
+      expect(proposal.deadline).to.equal(block.timestamp + customDuration);
+    });
+
+    it("Debe usar defaultProposalDuration cuando parametersContract.proposalDuration == 0", async () => {
+      await dummyParams.setProposalDuration(0); // Asegurar que sea 0
+
+      // Conectar parametersContract
+      await proposalManager.setParameters(dummyParams.target);
+
+      const tx = await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Default Duration Test",
+        "Testing default duration",
+        MIN_VOTING_POWER
+      );
+      const block = await ethers.provider.getBlock(tx.blockNumber);
+
+      const proposal = await proposalManager.getProposal(0);
+      expect(proposal.deadline).to.equal(block.timestamp + PROPOSAL_DURATION);
+    });
+
+    it("Debe revertir vote si propuesta no existe", async () => {
+      await expect(
+        proposalManager.connect(voter1).vote(voter1.address, 999, VoteType.FOR)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotFound");
+    });
+
+    it("Debe revertir vote si propuesta no está activa", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      // Finalizar propuesta
+      await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+
+      await expect(
+        proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotActive");
+    });
+
+    it("Debe revertir vote si deadline pasó", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await ethers.provider.send("evm_increaseTime", [PROPOSAL_DURATION + 1]);
+      await ethers.provider.send("evm_mine");
+
+      await expect(
+        proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalDeadlinePassed");
+    });
+
+    it("Debe revertir vote si voteType es NONE", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await expect(
+        proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.NONE)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidVoteType");
+    });
+
+    it("Debe revertir vote si ya votó", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+
+      await expect(
+        proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.AGAINST)
+      ).to.be.revertedWithCustomError(proposalManager, "AlreadyVoted");
+    });
+
+    it("Debe revertir changeVote si propuesta no existe", async () => {
+      await expect(
+        proposalManager.connect(voter1).changeVote(voter1.address, 999, VoteType.FOR)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotFound");
+    });
+
+    it("Debe revertir changeVote si propuesta no está activa", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+      await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+
+      await expect(
+        proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.AGAINST)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotActive");
+    });
+
+    it("Debe revertir changeVote si deadline pasó", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+
+      await ethers.provider.send("evm_increaseTime", [PROPOSAL_DURATION + 1]);
+      await ethers.provider.send("evm_mine");
+
+      await expect(
+        proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.AGAINST)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalDeadlinePassed");
+    });
+
+    it("Debe revertir changeVote si newVoteType es NONE", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+
+      await expect(
+        proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.NONE)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidVoteType");
+    });
+
+    it("Debe revertir changeVote si no ha votado aún", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await expect(
+        proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.FOR)
+      ).to.be.revertedWithCustomError(proposalManager, "NotVotedYet");
+    });
+
+    it("changeVote de FOR a AGAINST debe actualizar correctamente", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+
+      let proposal = await proposalManager.getProposal(0);
+      expect(proposal.votesFor).to.equal(6000);
+      expect(proposal.votesAgainst).to.equal(0);
+
+      await proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.AGAINST);
+
+      proposal = await proposalManager.getProposal(0);
+      expect(proposal.votesFor).to.equal(0);
+      expect(proposal.votesAgainst).to.equal(6000);
+    });
+
+    it("changeVote de AGAINST a FOR debe actualizar correctamente", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.AGAINST);
+
+      let proposal = await proposalManager.getProposal(0);
+      expect(proposal.votesFor).to.equal(0);
+      expect(proposal.votesAgainst).to.equal(6000);
+
+      await proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.FOR);
+
+      proposal = await proposalManager.getProposal(0);
+      expect(proposal.votesFor).to.equal(6000);
+      expect(proposal.votesAgainst).to.equal(0);
+    });
+
+    it("Debe revertir finalizeProposal si propuesta no existe", async () => {
+      await expect(
+        proposalManager.finalizeProposal(999, TOTAL_VOTING_POWER)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotFound");
+    });
+
+    it("Debe revertir finalizeProposal si propuesta no está activa", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+
+      await expect(
+        proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotActive");
+    });
+
+    it("Debe revertir expireProposal si propuesta no existe", async () => {
+      await expect(
+        proposalManager.expireProposal(999)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotFound");
+    });
+
+    it("Debe revertir expireProposal si propuesta no está activa", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+
+      await expect(
+        proposalManager.expireProposal(0)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotActive");
+    });
+
+    it("Debe revertir expireProposal si deadline no ha pasado", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Test Proposal",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await expect(
+        proposalManager.expireProposal(0)
+      ).to.be.revertedWithCustomError(proposalManager, "DeadlineNotPassed");
+    });
+
+    it("Debe revertir getProposal si propuesta no existe", async () => {
+      await expect(
+        proposalManager.getProposal(999)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotFound");
+    });
+
+    it("Debe revertir getProposalResults si propuesta no existe", async () => {
+      await expect(
+        proposalManager.getProposalResults(999)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotFound");
+    });
+
+    it("Debe revertir getProposalState si propuesta no existe", async () => {
+      await expect(
+        proposalManager.getProposalState(999)
+      ).to.be.revertedWithCustomError(proposalManager, "ProposalNotFound");
+    });
+
+    it("Debe revertir setVotingStrategy con address(0)", async () => {
+      await expect(
+        proposalManager.setVotingStrategy(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidVotingStrategy");
+    });
+
+    it("Debe revertir setMinVotingPowerToPropose si no es owner", async () => {
+      await expect(
+        proposalManager.connect(voter1).setMinVotingPowerToPropose(500)
+      ).to.be.reverted;
+    });
+
+    it("Debe revertir setDefaultProposalDuration si no es owner", async () => {
+      await expect(
+        proposalManager.connect(voter1).setDefaultProposalDuration(3600)
+      ).to.be.reverted;
+    });
+
+    it("Constructor debe revertir si votingStrategy es address(0)", async () => {
+      const ProposalManager = await ethers.getContractFactory("ProposalManager");
+      await expect(
+        ProposalManager.deploy(ethers.ZeroAddress, 100, 3600)
+      ).to.be.revertedWithCustomError(ProposalManager, "InvalidVotingStrategy");
+    });
+
+    it("Constructor debe revertir si defaultProposalDuration es 0", async () => {
+      const ProposalManager = await ethers.getContractFactory("ProposalManager");
+      await expect(
+        ProposalManager.deploy(votingStrategy.target, 100, 0)
+      ).to.be.revertedWithCustomError(ProposalManager, "InvalidDuration");
+    });
+
+    it("Debe usar estrategia del StrategyManager en vote si está enlazado", async () => {
+      // Deploy StrategyManager
+      const StrategyManager = await ethers.getContractFactory("StrategyManager");
+      const strategyManager = await StrategyManager.deploy(votingStrategy.target);
+      await strategyManager.waitForDeployment();
+
+      // Enlazar
+      await proposalManager.linkStrategyManager(strategyManager.target);
+
+      // Crear propuesta
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "StrategyManager Vote Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      // Votar - debe usar la estrategia del strategyManager
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+
+      expect(await proposalManager.hasUserVoted(0, voter1.address)).to.be.true;
+    });
   });
 });

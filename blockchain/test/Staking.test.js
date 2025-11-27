@@ -39,6 +39,28 @@ describe("Staking", function () {
     await staking.connect(owner).setProposingLock(0);
   });
 
+  // --------------------------------------------------------------
+  // Constructor
+  // --------------------------------------------------------------
+  describe("Constructor", () => {
+    it("Debe revertir si token es address(0)", async () => {
+      await expect(
+        Staking.deploy(ethers.ZeroAddress, parameters.target)
+      ).to.be.revertedWithCustomError(staking, "InvalidAddress");
+    });
+
+    it("Debe revertir si parameters es address(0)", async () => {
+      await expect(
+        Staking.deploy(sha.target, ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(staking, "InvalidAddress");
+    });
+
+    it("Debe inicializar correctamente token y parameters", async () => {
+      expect(await staking.token()).to.equal(sha.target);
+      expect(await staking.parameters()).to.equal(parameters.target);
+    });
+  });
+
   it("Debe setear correctamente los locks", async () => {
     expect(await staking.votingLock()).to.equal(LOCK_TIME);
     expect(await staking.proposingLock()).to.equal(LOCK_TIME);
@@ -236,6 +258,281 @@ describe("Staking", function () {
       await staking.connect(user2).extendVotingLock(user.address, oldLock);
       const after = await staking.lockedUntilVoting(user.address);
       expect(after).to.equal(oldLock);
+    });
+  });
+
+  // --------------------------------------------------------------
+  // setParameters
+  // --------------------------------------------------------------
+  describe("setParameters", () => {
+    it("Debe permitir al owner cambiar la dirección de Parameters", async () => {
+      const newParams = await Parameters.deploy(owner.address);
+      await newParams.waitForDeployment();
+
+      await expect(staking.connect(owner).setParameters(newParams.target))
+        .to.emit(staking, "ParametersUpdated")
+        .withArgs(parameters.target, newParams.target);
+
+      expect(await staking.parameters()).to.equal(newParams.target);
+    });
+
+    it("Debe revertir si newParameters es address(0)", async () => {
+      await expect(
+        staking.connect(owner).setParameters(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(staking, "InvalidAddress");
+    });
+
+    it("Debe revertir si no es el owner", async () => {
+      const newParams = await Parameters.deploy(owner.address);
+      await newParams.waitForDeployment();
+
+      await expect(
+        staking.connect(user).setParameters(newParams.target)
+      ).to.be.revertedWithCustomError(staking, "OwnableUnauthorizedAccount");
+    });
+  });
+
+  // --------------------------------------------------------------
+  // getVotingLockExpiry
+  // --------------------------------------------------------------
+  describe("getVotingLockExpiry", () => {
+    it("Debe retornar 0 si el usuario no ha stakeado", async () => {
+      expect(await staking.getVotingLockExpiry(user.address)).to.equal(0);
+    });
+
+    it("Debe retornar el timestamp de expiración correcto después de stakear", async () => {
+      await sha.connect(user).approve(staking.target, 1000);
+      const tx = await staking.connect(user).stakeForVoting(1000);
+      const block = await ethers.provider.getBlock(tx.blockNumber);
+      
+      const expiry = await staking.getVotingLockExpiry(user.address);
+      expect(expiry).to.equal(block.timestamp + LOCK_TIME);
+    });
+  });
+
+  // --------------------------------------------------------------
+  // stakeForVotingFrom - pruebas de la función delegada
+  // --------------------------------------------------------------
+  describe("stakeForVotingFrom", () => {
+    it("Debe stakear tokens para otro usuario", async () => {
+      const initialStake = await staking.votingStake(user.address);
+      expect(initialStake).to.equal(0);
+
+      await staking.connect(owner).stakeForVotingFrom(user.address, 500);
+
+      expect(await staking.votingStake(user.address)).to.equal(500);
+    });
+
+    it("Debe actualizar el lock del usuario destino", async () => {
+      const tx = await staking.connect(owner).stakeForVotingFrom(user.address, 500);
+      const block = await ethers.provider.getBlock(tx.blockNumber);
+
+      expect(await staking.lockedUntilVoting(user.address))
+        .to.equal(block.timestamp + LOCK_TIME);
+    });
+
+    it("Debe incrementar totalVotingStaked", async () => {
+      const before = await staking.totalVotingStaked();
+      await staking.connect(owner).stakeForVotingFrom(user.address, 300);
+      const after = await staking.totalVotingStaked();
+      expect(after).to.equal(before + 300n);
+    });
+
+    it("Debe emitir evento StakedForVoting con los datos correctos", async () => {
+      await expect(staking.connect(owner).stakeForVotingFrom(user.address, 400))
+        .to.emit(staking, "StakedForVoting");
+    });
+
+    it("Debe revertir si amount es 0", async () => {
+      await expect(
+        staking.connect(owner).stakeForVotingFrom(user.address, 0)
+      ).to.be.revertedWithCustomError(staking, "InvalidAmount");
+    });
+  });
+
+  // --------------------------------------------------------------
+  // stakeForProposingFrom - pruebas de la función delegada
+  // --------------------------------------------------------------
+  describe("stakeForProposingFrom", () => {
+    it("Debe stakear tokens para proponer para otro usuario", async () => {
+      const initialStake = await staking.proposalStake(user.address);
+      expect(initialStake).to.equal(0);
+
+      await staking.connect(owner).stakeForProposingFrom(user.address, 600);
+
+      expect(await staking.proposalStake(user.address)).to.equal(600);
+    });
+
+    it("Debe actualizar el lock de proposing del usuario destino", async () => {
+      const tx = await staking.connect(owner).stakeForProposingFrom(user.address, 600);
+      const block = await ethers.provider.getBlock(tx.blockNumber);
+
+      expect(await staking.lockedUntilProposing(user.address))
+        .to.equal(block.timestamp + LOCK_TIME);
+    });
+
+    it("Debe incrementar totalProposalStaked", async () => {
+      const before = await staking.totalProposalStaked();
+      await staking.connect(owner).stakeForProposingFrom(user.address, 700);
+      const after = await staking.totalProposalStaked();
+      expect(after).to.equal(before + 700n);
+    });
+
+    it("Debe emitir evento StakedForProposing con los datos correctos", async () => {
+      await expect(staking.connect(owner).stakeForProposingFrom(user.address, 800))
+        .to.emit(staking, "StakedForProposing");
+    });
+
+    it("Debe revertir si amount es 0", async () => {
+      await expect(
+        staking.connect(owner).stakeForProposingFrom(user.address, 0)
+      ).to.be.revertedWithCustomError(staking, "InvalidAmount");
+    });
+  });
+
+  // --------------------------------------------------------------
+  // setDaoController
+  // --------------------------------------------------------------
+  describe("setDaoController", () => {
+    it("Debe permitir al owner establecer el daoController", async () => {
+      await staking.connect(owner).setDaoController(user.address);
+      expect(await staking.daoController()).to.equal(user.address);
+    });
+
+    it("Debe revertir si newDao es address(0)", async () => {
+      await expect(
+        staking.connect(owner).setDaoController(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(staking, "InvalidAddress");
+    });
+
+    it("Debe revertir si no es el owner", async () => {
+      await expect(
+        staking.connect(user).setDaoController(user2.address)
+      ).to.be.revertedWithCustomError(staking, "OwnableUnauthorizedAccount");
+    });
+  });
+
+  // --------------------------------------------------------------
+  // totalVotingStaked and totalProposalStaked
+  // --------------------------------------------------------------
+  describe("Total stakes", () => {
+    it("totalVotingStaked debe actualizarse correctamente", async () => {
+      expect(await staking.totalVotingStaked()).to.equal(0);
+
+      await sha.connect(user).approve(staking.target, 1000);
+      await staking.connect(user).stakeForVoting(1000);
+      
+      expect(await staking.totalVotingStaked()).to.equal(1000);
+
+      await sha.connect(user2).approve(staking.target, 500);
+      await staking.connect(user2).stakeForVoting(500);
+      
+      expect(await staking.totalVotingStaked()).to.equal(1500);
+    });
+
+    it("totalProposalStaked debe actualizarse correctamente", async () => {
+      expect(await staking.totalProposalStaked()).to.equal(0);
+
+      await sha.connect(user).approve(staking.target, 2000);
+      await staking.connect(user).stakeForProposing(2000);
+      
+      expect(await staking.totalProposalStaked()).to.equal(2000);
+
+      await sha.connect(user2).approve(staking.target, 1000);
+      await staking.connect(user2).stakeForProposing(1000);
+      
+      expect(await staking.totalProposalStaked()).to.equal(3000);
+    });
+  });
+
+  // --------------------------------------------------------------
+  // Branch Coverage - Additional Tests
+  // --------------------------------------------------------------
+  describe("Branch Coverage - Additional Tests", () => {
+    it("stakeForVoting con diferentes montos debe funcionar", async () => {
+      await sha.connect(user).approve(staking.target, 5000);
+      await staking.connect(user).stakeForVoting(1000);
+      await staking.connect(user).stakeForVoting(2000);
+      expect(await staking.votingStake(user.address)).to.equal(3000);
+    });
+
+    it("stakeForProposing con diferentes montos debe funcionar", async () => {
+      await sha.connect(user).approve(staking.target, 5000);
+      await staking.connect(user).stakeForProposing(1000);
+      await staking.connect(user).stakeForProposing(2000);
+      expect(await staking.proposalStake(user.address)).to.equal(3000);
+    });
+
+    it("unstakeFromVoting parcial debe funcionar", async () => {
+      await sha.connect(user).approve(staking.target, 1000);
+      await staking.connect(user).stakeForVoting(1000);
+
+      await ethers.provider.send("evm_increaseTime", [LOCK_TIME + 1]);
+      await ethers.provider.send("evm_mine");
+
+      await staking.connect(user).unstakeFromVoting(400);
+      expect(await staking.votingStake(user.address)).to.equal(600);
+
+      await staking.connect(user).unstakeFromVoting(600);
+      expect(await staking.votingStake(user.address)).to.equal(0);
+    });
+
+    it("unstakeFromProposing parcial debe funcionar", async () => {
+      await sha.connect(user).approve(staking.target, 1000);
+      await staking.connect(user).stakeForProposing(1000);
+
+      await ethers.provider.send("evm_increaseTime", [LOCK_TIME + 1]);
+      await ethers.provider.send("evm_mine");
+
+      await staking.connect(user).unstakeFromProposing(300);
+      expect(await staking.proposalStake(user.address)).to.equal(700);
+
+      await staking.connect(user).unstakeFromProposing(700);
+      expect(await staking.proposalStake(user.address)).to.equal(0);
+    });
+
+    it("Múltiples usuarios staking simultáneo", async () => {
+      await sha.connect(user).approve(staking.target, 500);
+      await sha.connect(user2).approve(staking.target, 800);
+
+      await staking.connect(user).stakeForVoting(500);
+      await staking.connect(user2).stakeForVoting(800);
+
+      expect(await staking.totalVotingStaked()).to.equal(1300);
+      expect(await staking.votingStake(user.address)).to.equal(500);
+      expect(await staking.votingStake(user2.address)).to.equal(800);
+    });
+
+    it("setVotingLock y setProposingLock solo owner", async () => {
+      await expect(
+        staking.connect(user).setVotingLock(0)
+      ).to.be.revertedWithCustomError(staking, "OwnableUnauthorizedAccount");
+
+      await expect(
+        staking.connect(user).setProposingLock(0)
+      ).to.be.revertedWithCustomError(staking, "OwnableUnauthorizedAccount");
+    });
+
+    it("stakeForVotingFrom con múltiples llamadas", async () => {
+      await staking.connect(owner).stakeForVotingFrom(user.address, 100);
+      await staking.connect(owner).stakeForVotingFrom(user.address, 200);
+      expect(await staking.votingStake(user.address)).to.equal(300);
+    });
+
+    it("stakeForProposingFrom con múltiples llamadas", async () => {
+      await staking.connect(owner).stakeForProposingFrom(user.address, 150);
+      await staking.connect(owner).stakeForProposingFrom(user.address, 250);
+      expect(await staking.proposalStake(user.address)).to.equal(400);
+    });
+
+    it("lockedUntilProposing debe actualizarse al stakear", async () => {
+      expect(await staking.lockedUntilProposing(user.address)).to.equal(0);
+
+      await sha.connect(user).approve(staking.target, 500);
+      const tx = await staking.connect(user).stakeForProposing(500);
+      const block = await ethers.provider.getBlock(tx.blockNumber);
+
+      expect(await staking.lockedUntilProposing(user.address)).to.equal(block.timestamp + LOCK_TIME);
     });
   });
 

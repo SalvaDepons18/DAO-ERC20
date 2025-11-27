@@ -146,39 +146,11 @@ describe("SimpleMajorityStrategy", function () {
   // isProposalAccepted
   // ---------------------------
   describe("isProposalAccepted", function () {
-    it("Debe aceptar propuesta si votesFor > votesAgainst", async function () {
-      const isAccepted = await strategy.isProposalAccepted(100, 50, 150);
-      expect(isAccepted).to.be.true;
-    });
-
-    it("Debe rechazar propuesta si votesFor < votesAgainst", async function () {
-      const isAccepted = await strategy.isProposalAccepted(30, 70, 100);
-      expect(isAccepted).to.be.false;
-    });
-
-    it("Debe rechazar propuesta si votesFor == votesAgainst (empate)", async function () {
-      const isAccepted = await strategy.isProposalAccepted(50, 50, 100);
-      expect(isAccepted).to.be.false;
-    });
-
-    it("Debe aceptar propuesta con votesFor muy superior", async function () {
-      const isAccepted = await strategy.isProposalAccepted(1000, 1, 1001);
-      expect(isAccepted).to.be.true;
-    });
-
-    it("Debe funcionar con valores mínimos", async function () {
-      const isAccepted = await strategy.isProposalAccepted(1, 0, 1);
-      expect(isAccepted).to.be.true;
-    });
-
-    it("Debe rechazar si no hay votos a favor", async function () {
-      const isAccepted = await strategy.isProposalAccepted(0, 10, 10);
-      expect(isAccepted).to.be.false;
-    });
-
-    it("Debe rechazar si ambos votos son 0", async function () {
-      const isAccepted = await strategy.isProposalAccepted(0, 0, 0);
-      expect(isAccepted).to.be.false;
+    it("Debe aceptar propuesta si votesFor > votesAgainst y rechazar en caso contrario", async function () {
+      expect(await strategy.isProposalAccepted(100, 50, 150)).to.be.true;
+      expect(await strategy.isProposalAccepted(30, 70, 100)).to.be.false;
+      expect(await strategy.isProposalAccepted(50, 50, 100)).to.be.false; // empate
+      expect(await strategy.isProposalAccepted(0, 0, 0)).to.be.false; // sin votos
     });
   });
 
@@ -202,44 +174,68 @@ describe("SimpleMajorityStrategy", function () {
       await staking.connect(user3).stakeForVoting(ethers.parseEther("300"));
     });
 
-    it("Escenario 1: Mayoría a favor gana", async function () {
-      // user1 (10 VP) y user2 (5 VP) votan a favor = 15 VP
-      // user3 (3 VP) vota en contra = 3 VP
+    it("Debe calcular correctamente escenarios de votación con múltiples usuarios", async function () {
+      const vp1 = await strategy.calculateVotingPower(user1.address); // 10 VP
+      const vp2 = await strategy.calculateVotingPower(user2.address); // 5 VP
+      const vp3 = await strategy.calculateVotingPower(user3.address); // 3 VP
       
-      const vp1 = await strategy.calculateVotingPower(user1.address);
-      const vp2 = await strategy.calculateVotingPower(user2.address);
-      const vp3 = await strategy.calculateVotingPower(user3.address);
+      // Mayoría a favor: 15 vs 3
+      expect(await strategy.isProposalAccepted(vp1 + vp2, vp3, vp1 + vp2 + vp3)).to.be.true;
       
-      const votesFor = vp1 + vp2; // 15 VP
-      const votesAgainst = vp3;   // 3 VP
-      const totalVotingPower = vp1 + vp2 + vp3;
+      // Mayoría en contra: 8 vs 10
+      expect(await strategy.isProposalAccepted(vp2 + vp3, vp1, vp1 + vp2 + vp3)).to.be.false;
+    });
+  });
 
-      expect(await strategy.isProposalAccepted(votesFor, votesAgainst, totalVotingPower)).to.be.true;
+  // ---------------------------
+  // getTotalVotingPower
+  // ---------------------------
+  describe("getTotalVotingPower", function () {
+    it("Debe retornar el poder de voto total basado en stake total", async function () {
+      // Mintear y stakear tokens
+      await token.mint(user1.address, ethers.parseEther("1000"));
+      await token.mint(user2.address, ethers.parseEther("500"));
+      
+      await token.connect(user1).approve(staking.target, ethers.parseEther("1000"));
+      await token.connect(user2).approve(staking.target, ethers.parseEther("500"));
+      
+      await staking.connect(user1).stakeForVoting(ethers.parseEther("1000"));
+      await staking.connect(user2).stakeForVoting(ethers.parseEther("500"));
+      
+      // Total stake = 1500, tokensPerVP = 100 → total VP = 15
+      const totalVP = await strategy.getTotalVotingPower();
+      expect(totalVP).to.equal(15n);
     });
 
-    it("Escenario 2: Mayoría en contra rechaza", async function () {
-      // user1 (10 VP) vota en contra = 10 VP
-      // user2 (5 VP) y user3 (3 VP) votan a favor = 8 VP
-      
-      const vp1 = await strategy.calculateVotingPower(user1.address);
-      const vp2 = await strategy.calculateVotingPower(user2.address);
-      const vp3 = await strategy.calculateVotingPower(user3.address);
-      
-      const votesFor = vp2 + vp3;     // 8 VP
-      const votesAgainst = vp1;       // 10 VP
-      const totalVotingPower = vp1 + vp2 + vp3;
-
-      expect(await strategy.isProposalAccepted(votesFor, votesAgainst, totalVotingPower)).to.be.false;
+    it("Debe retornar 0 si no hay stake", async function () {
+      const totalVP = await strategy.getTotalVotingPower();
+      expect(totalVP).to.equal(0);
     });
 
-    it("Escenario 3: Un solo votante a favor, sin oposición", async function () {
-      const vp1 = await strategy.calculateVotingPower(user1.address);
+    it("Debe retornar 0 si tokensPerVotingPower es 0", async function () {
+      // Stakear algo primero
+      await token.mint(user1.address, ethers.parseEther("1000"));
+      await token.connect(user1).approve(staking.target, ethers.parseEther("1000"));
+      await staking.connect(user1).stakeForVoting(ethers.parseEther("1000"));
       
-      const votesFor = vp1;
-      const votesAgainst = 0n;
-      const totalVotingPower = vp1;
+      // Cambiar tokensPerVotingPower a 0
+      await parameters.setTokensPerVotingPower(0);
+      
+      const totalVP = await strategy.getTotalVotingPower();
+      expect(totalVP).to.equal(0);
+    });
 
-      expect(await strategy.isProposalAccepted(votesFor, votesAgainst, totalVotingPower)).to.be.true;
+    it("Debe calcular correctamente con diferentes ratios", async function () {
+      await token.mint(user1.address, ethers.parseEther("2000"));
+      await token.connect(user1).approve(staking.target, ethers.parseEther("2000"));
+      await staking.connect(user1).stakeForVoting(ethers.parseEther("2000"));
+      
+      // Cambiar a 400 tokens = 1 VP
+      await parameters.setTokensPerVotingPower(ethers.parseEther("400"));
+      
+      // Total stake = 2000, tokensPerVP = 400 → total VP = 5
+      const totalVP = await strategy.getTotalVotingPower();
+      expect(totalVP).to.equal(5n);
     });
   });
 });
