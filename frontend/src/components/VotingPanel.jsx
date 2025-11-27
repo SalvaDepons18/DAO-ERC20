@@ -98,7 +98,7 @@ export default function VotingPanel({ proposalId, onVoteSuccess }) {
     } finally { setLoading(false); }
   };
 
-  const hasVoted = userVote !== 'NONE';
+  const hasVoted = userVote !== 'NONE' && userVote !== 'NOT_VOTED';
 
   return (
     <div className={`voting-panel ${hasVoted ? 'voted' : ''}`}> 
