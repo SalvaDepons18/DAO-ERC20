@@ -279,12 +279,12 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
   });
 
   it("unstakeVoting: funciona", async () => {
-    await dao.connect(user).unstakeVoting();
+    await staking.connect(user).unstakeFromVoting(0);
     expect(await staking.lastUser()).to.equal(user.address);
   });
 
   it("unstakeProposing: funciona", async () => {
-    await dao.connect(user).unstakeProposing();
+    await staking.connect(user).unstakeFromProposing(0);
     expect(await staking.lastUser()).to.equal(user.address);
   });
 
@@ -292,8 +292,7 @@ describe("DAO – Tests Exhaustivos (actualizados con notInPanic en owner)", fun
     await panicManager.setPanic(true);
 
     await expect(dao.connect(user).stakeForVoting(10)).to.be.reverted;
-    await expect(dao.connect(user).unstakeVoting()).to.be.reverted;
-    await expect(dao.connect(user).unstakeProposing()).to.be.reverted;
+    // unstake se hace directamente en staking, no a través del DAO
   });
 
   // =====================================================

@@ -8,17 +8,6 @@ import "./interfaces/IStrategyManager.sol";
 import "./interfaces/IParameters.sol";
 import "./interfaces/IPanicManager.sol";
 
-// Interfaz extendida para MockProposalManager (solo para tests)
-interface IMockProposalManager is IProposalManager {
-    function setCurrentVoter(address _voter) external;
-    function setCurrentCreator(address _creator) external;
-}
-
-// Interfaz extendida para MockStaking (solo para tests)
-interface IMockStaking is IStaking {
-    function setCurrentUser(address _user) external;
-}
-
 contract DAO {
     error NotOwner();
     error InvalidAddress();
@@ -96,8 +85,6 @@ contract DAO {
         if (_price == 0) revert ZeroPrice();
         if (msg.value < _price) revert InsufficientETH();
 
-        // Calculate amount: (msg.value * 10^18) / price
-        // This ensures we get tokens with 18 decimals
         uint256 _amount = (msg.value * 1e18) / _price;
         if (_amount == 0) revert ZeroAmount();
 
@@ -112,7 +99,6 @@ contract DAO {
     {
         if (bytes(_title).length == 0 || bytes(_description).length == 0) revert EmptyString();
 
-        // Use proposing stake as the power required to create proposals
         uint256 proposingStake = staking.getProposingStake(msg.sender);
         uint256 minPropose = parameters.minStakeForProposing();
         if (proposingStake < minPropose) revert MinStakeNotMet();
@@ -125,22 +111,16 @@ contract DAO {
     {
         uint256 minStake = parameters.minStakeForVoting();
         if (staking.getVotingStake(msg.sender) < minStake) revert MinStakeNotMet();
-        // Extend lock to proposal deadline if longer than current user lock
-        // Safely try to fetch proposal
         try proposalManager.getProposal(_proposalId) returns (IProposalManager.Proposal memory prop) {
             uint256 currentLock = 0;
             try staking.getVotingLockExpiry(msg.sender) returns (uint256 expiry) { currentLock = expiry; } catch {}
             if (prop.deadline > currentLock) {
-                // silently ignore failure for mocks
                 try staking.extendVotingLock(msg.sender, prop.deadline) {} catch {}
             }
         } catch {}
         IProposalManager.VoteType voteType = _support 
             ? IProposalManager.VoteType.FOR 
             : IProposalManager.VoteType.AGAINST;
-        
-        // Try to set the voter for the mock (if it has the function)
-        try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
         
         proposalManager.vote(msg.sender, _proposalId, voteType);
     }
@@ -152,7 +132,6 @@ contract DAO {
         IProposalManager.VoteType newVoteType = _support
             ? IProposalManager.VoteType.FOR
             : IProposalManager.VoteType.AGAINST;
-        // Also ensure lock persists through deadline in case user changes vote later
         try proposalManager.getProposal(_proposalId) returns (IProposalManager.Proposal memory prop) {
             uint256 currentLock = 0;
             try staking.getVotingLockExpiry(msg.sender) returns (uint256 expiry) { currentLock = expiry; } catch {}
@@ -161,9 +140,6 @@ contract DAO {
             }
         } catch {}
 
-        // Try to set the voter for the mock (if it has the function)
-        try IMockProposalManager(address(proposalManager)).setCurrentVoter(msg.sender) {} catch {}
-
         proposalManager.changeVote(msg.sender, _proposalId, newVoteType);
     }
 
@@ -171,14 +147,7 @@ contract DAO {
         if (_amount == 0) revert ZeroAmount();
         uint256 minStake = parameters.minStakeForVoting();
         if (_amount < minStake) revert MinStakeNotMet();
-        // Single transfer directly to staking (remove double transfer pattern)
-        // User approves DAO; DAO pulls and sends straight to staking
         token.transferFrom(msg.sender, address(staking), _amount);
-
-        // Inform mock for tests if present
-        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
-
-        // Record stake without additional transfer
         staking.stakeForVotingFrom(msg.sender, _amount);
     }
 
@@ -186,27 +155,8 @@ contract DAO {
         if (_amount == 0) revert ZeroAmount();
         uint256 minStake = parameters.minStakeForProposing();
         if (_amount < minStake) revert MinStakeNotMet();
-        // Single transfer directly to staking
         token.transferFrom(msg.sender, address(staking), _amount);
-
-        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
         staking.stakeForProposingFrom(msg.sender, _amount);
-    }
-
-    function unstakeVoting() external notInPanic {
-        // Try to set the user for the mock (if it has the function)
-        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
-        
-        uint256 userStake = staking.getVotingStake(msg.sender);
-        staking.unstakeFromVoting(userStake);
-    }
-
-    function unstakeProposing() external notInPanic {
-        // Try to set the user for the mock (if it has the function)
-        try IMockStaking(address(staking)).setCurrentUser(msg.sender) {} catch {}
-        
-        uint256 userStake = staking.getProposingStake(msg.sender);
-        staking.unstakeFromProposing(userStake);
     }
 
     function mintTokens(address _to, uint256 _amount) external onlyOwner notInPanic{

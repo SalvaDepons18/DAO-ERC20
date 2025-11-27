@@ -18,11 +18,11 @@ contract MockStaking {
     }
 
     function unstakeFromVoting(uint256) external {
-        lastUser = currentUser;
+        lastUser = currentUser != address(0) ? currentUser : msg.sender;
     }
 
     function unstakeFromProposing(uint256) external {
-        lastUser = currentUser;
+        lastUser = currentUser != address(0) ? currentUser : msg.sender;
     }
 
     function getVotingStake(address) external pure returns (uint256) {
