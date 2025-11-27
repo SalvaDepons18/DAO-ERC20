@@ -26,22 +26,14 @@ export default function BuyTokens({ onTransactionSuccess }) {
       }
 
       const address = await signer.getAddress();
-      console.log('Comprando', ethAmount, 'ETH de tokens...');
-      console.log('Balance antes de comprar:', await getTokenBalance(address));
       
       const receipt = await buyTokens(ethAmount);
       
       // El hash puede venir del receipt
       const txHash = receipt.hash || receipt.transactionHash;
-      console.log('Transacción confirmada:', txHash);
-      console.log('Receipt:', receipt);
       
       setSuccess(`✅ Compra exitosa! Hash: ${txHash}`);
       setEthAmount('');
-      
-      // Verificar el nuevo balance inmediatamente
-      const newBalance = await getTokenBalance(address);
-      console.log('Balance después de comprar:', newBalance);
       
       // Notificar al componente padre para actualizar el dashboard
       if (onTransactionSuccess) {

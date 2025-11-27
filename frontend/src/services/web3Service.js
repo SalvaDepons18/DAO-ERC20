@@ -277,13 +277,10 @@ export const getSimpleMajorityStrategyContract = async (isReadOnly = true) => {
 export const buyTokens = async (ethAmount) => {
   await ensureReady();
   const dao = await getDAOContract();
-  console.log('Enviando transacción buyTokens...');
   const tx = await dao.buyTokens({
     value: ethers.parseEther(ethAmount.toString()),
   });
-  console.log('Transacción enviada, esperando confirmación...');
   const receipt = await tx.wait();
-  console.log('Transacción confirmada en bloque:', receipt.blockNumber);
   return receipt;
 };
 
@@ -386,9 +383,7 @@ export const unstakeProposing = async () => {
 export const getTokenBalance = async (address) => {
   const dao = await getDAOContract(true);
   const balance = await dao.getTokenBalance(address);
-  console.log('Balance raw:', balance.toString());
   const formattedBalance = ethers.formatEther(balance);
-  console.log('Balance formateado:', formattedBalance);
   return formattedBalance;
 };
 

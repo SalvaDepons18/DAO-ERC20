@@ -6,7 +6,6 @@ export default function TokenBalance({ symbol = 'SHA', refreshTrigger = 0 }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('TokenBalance useEffect triggered, refreshTrigger:', refreshTrigger);
     loadBalance();
   }, [refreshTrigger]);
 
@@ -15,15 +14,12 @@ export default function TokenBalance({ symbol = 'SHA', refreshTrigger = 0 }) {
       setLoading(true);
       const signer = await getSigner();
       if (!signer) {
-        console.log('No hay signer disponible');
         setBalance('0');
         return;
       }
 
       const address = await signer.getAddress();
-      console.log('Cargando balance para dirección:', address);
       const userBalance = await getTokenBalance(address);
-      console.log('Balance obtenido:', userBalance);
       setBalance(parseFloat(userBalance).toFixed(4));
     } catch (error) {
       console.error('Error cargando balance:', error);

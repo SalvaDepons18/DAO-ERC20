@@ -32,7 +32,6 @@ export default function ProposalList({ refreshTrigger = 0 }) {
 
   const loadProposals = async () => {
     try {
-      console.log('📋 ProposalList: Cargando propuestas...');
       setLoading(true);
       setError('');
 
@@ -40,15 +39,10 @@ export default function ProposalList({ refreshTrigger = 0 }) {
       if (signer) {
         const address = await signer.getAddress();
         setUserAddress(address.toLowerCase());
-        console.log('👤 Usuario conectado:', address);
-        console.log('👤 Usuario conectado (lowercase):', address.toLowerCase());
-      } else {
-        console.warn('No hay signer disponible');
       }
 
       // Obtener el número total de propuestas vía DAO facade
       const total = await getProposalCount();
-      console.log('📊 Total de propuestas a cargar:', total);
 
       const loadedProposals = [];
       
@@ -69,16 +63,12 @@ export default function ProposalList({ refreshTrigger = 0 }) {
             deadline: parseInt(proposal.deadline.toString()) * 1000,
             timestamp: parseInt(proposal.createdAt.toString()) * 1000
           };
-          console.log(`✅ Propuesta ${i} cargada:`, proposalData.title, `(${proposalData.stateName})`);
-          console.log(`   📍 Proposer: ${proposalData.proposer}`);
-          console.log(`   📍 Proposer (lowercase): ${proposalData.proposer.toLowerCase()}`);
           loadedProposals.push(proposalData);
         } catch (error) {
           console.error(`❌ Error cargando propuesta ${i}:`, error);
         }
       }
 
-      console.log('📝 Total propuestas cargadas:', loadedProposals.length);
       setProposals(loadedProposals);
     } catch (error) {
       console.error('Error cargando propuestas:', error);
@@ -94,26 +84,10 @@ export default function ProposalList({ refreshTrigger = 0 }) {
     if (filter === 'MINE') {
       const proposer = (p?.proposer || '').toLowerCase();
       const ua = (userAddress || '').toLowerCase();
-      console.log('🔍 Comparando MINE:', { proposer, ua, match: proposer === ua });
       return proposer && ua && proposer === ua;
     }
-    const matches = p.stateName === filter;
-    if (filter === 'EXPIRED') {
-      console.log(`🔍 Propuesta ${p.id}: stateName="${p.stateName}", matches=${matches}`);
-    }
-    return matches;
+    return p.stateName === filter;
   });
-
-  console.log('🔍 Filtro actual:', filter);
-  console.log('📋 Propuestas totales:', proposals.length);
-  console.log('👤 Usuario actual:', userAddress);
-  console.log('✅ Propuestas filtradas:', filteredProposals.length);
-  if (filter === 'MINE' && filteredProposals.length === 0 && proposals.length > 0) {
-    console.warn('MINE está vacío. Propuestas disponibles:');
-    proposals.forEach(p => {
-      console.log(`   - ID ${p.id}: proposer=${p.proposer.toLowerCase()}, match=${p.proposer.toLowerCase() === userAddress}`);
-    });
-  }
 
   return (
     <div className="proposal-list">

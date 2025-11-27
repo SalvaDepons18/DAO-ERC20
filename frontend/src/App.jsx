@@ -44,11 +44,9 @@ function App() {
 
     // Escuchar cambios de cuenta y red
     const handleAccountsChanged = (accounts) => {
-      console.log('Cuenta cambiada:', accounts);
       setRefreshTrigger(prev => prev + 1);
     };    
     const handleChainChanged = () => {
-      console.log('Red cambiada');
       window.location.reload();
     };
     if (window.ethereum) {
@@ -67,7 +65,6 @@ function App() {
 
   const loadDashboardData = async () => {
     try {
-      console.log('🔄 Actualizando dashboard...');
       const signer = await getSigner();
       if (!signer) {
         setDashboardData({
@@ -122,7 +119,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <h1>🏛️ ShaCoin DAO</h1>
+          <h1>ShaCoin DAO</h1>
           <WalletConnect />
         </div>
       </header>

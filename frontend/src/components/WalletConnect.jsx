@@ -57,7 +57,6 @@ export default function WalletConnect() {
       const address = await signer.getAddress();
       setAccount(address);
       setWalletType('metamask');
-      console.log('✅ MetaMask conectada:', address);
     } catch (error) {
       console.error('❌ Error conectando MetaMask:', error);
       alert('Error al conectar MetaMask: ' + error.message);
@@ -80,7 +79,6 @@ export default function WalletConnect() {
       const address = await signer.getAddress();
       setAccount(address);
       setWalletType('phantom');
-      console.log('✅ Phantom Wallet conectada:', address);
     } catch (error) {
       console.error('❌ Error conectando Phantom:', error);
       alert('Error al conectar Phantom Wallet: ' + error.message);
@@ -91,7 +89,6 @@ export default function WalletConnect() {
 
   const disconnectWallet = () => {
     setAccount(null);
-    console.log('Wallet desconectada');
   };
 
   return (
@@ -128,7 +125,6 @@ export default function WalletConnect() {
       ) : (
         <div className="wallet-info">
           <span className="address">
-            {walletType && <span className="wallet-badge">{walletType === 'metamask' ? '🦊' : '👻'}</span>}
             {account.slice(0, 6)}...{account.slice(-4)}
           </span>
           <button onClick={disconnectWallet} className="btn btn-secondary">
