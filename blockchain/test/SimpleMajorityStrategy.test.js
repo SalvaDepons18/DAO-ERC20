@@ -238,4 +238,106 @@ describe("SimpleMajorityStrategy", function () {
       expect(totalVP).to.equal(5n);
     });
   });
+
+  // ---------------------------
+  // isProposalAccepted - Tests adicionales
+  // ---------------------------
+  describe("isProposalAccepted - Branch Coverage", function () {
+    it("Debe retornar true cuando votesFor > votesAgainst", async function () {
+      expect(await strategy.isProposalAccepted(100, 50, 150)).to.be.true;
+    });
+
+    it("Debe retornar false cuando votesFor < votesAgainst", async function () {
+      expect(await strategy.isProposalAccepted(50, 100, 150)).to.be.false;
+    });
+
+    it("Debe retornar false cuando votesFor == votesAgainst (empate)", async function () {
+      expect(await strategy.isProposalAccepted(100, 100, 200)).to.be.false;
+    });
+
+    it("Debe retornar false cuando no hay votos", async function () {
+      expect(await strategy.isProposalAccepted(0, 0, 100)).to.be.false;
+    });
+
+    it("Debe manejar números grandes", async function () {
+      const bigFor = ethers.parseEther("1000000");
+      const bigAgainst = ethers.parseEther("500000");
+      const bigTotal = ethers.parseEther("1500000");
+      expect(await strategy.isProposalAccepted(bigFor, bigAgainst, bigTotal)).to.be.true;
+    });
+
+    it("totalVotingPower no afecta resultado (mayoría simple)", async function () {
+      // El tercer parámetro no se usa en SimpleMajorityStrategy
+      expect(await strategy.isProposalAccepted(10, 5, 0)).to.be.true;
+      expect(await strategy.isProposalAccepted(10, 5, 1000)).to.be.true;
+    });
+  });
+
+  // ---------------------------
+  // getTotalVotingPower - Tests adicionales
+  // ---------------------------
+  describe("getTotalVotingPower - Branch Coverage", function () {
+    it("Debe retornar 0 cuando tokensPerVotingPower es 0", async function () {
+      await token.mint(user1.address, ethers.parseEther("1000"));
+      await token.connect(user1).approve(staking.target, ethers.parseEther("1000"));
+      await staking.connect(user1).stakeForVoting(ethers.parseEther("1000"));
+
+      // Setear tokensPerVotingPower a 0
+      await parameters.setTokensPerVotingPower(0);
+      
+      const totalVP = await strategy.getTotalVotingPower();
+      expect(totalVP).to.equal(0);
+    });
+
+    it("Debe retornar 0 cuando no hay stake", async function () {
+      expect(await strategy.getTotalVotingPower()).to.equal(0);
+    });
+
+    it("Debe calcular correctamente total voting power con stake", async function () {
+      await token.mint(user1.address, ethers.parseEther("500"));
+      await token.connect(user1).approve(staking.target, ethers.parseEther("500"));
+      await staking.connect(user1).stakeForVoting(ethers.parseEther("500"));
+      
+      // 500 tokens / 100 tokensPerVP = 5 VP
+      const totalVP = await strategy.getTotalVotingPower();
+      expect(totalVP).to.equal(5n);
+    });
+  });
+
+  // ---------------------------
+  // calculateVotingPower - Branch Coverage adicional
+  // ---------------------------
+  describe("calculateVotingPower - Branch Coverage", function () {
+    it("Debe retornar 0 si userStake es 0", async function () {
+      const vp = await strategy.calculateVotingPower(user3.address);
+      expect(vp).to.equal(0);
+    });
+
+    it("Debe retornar 0 si tokensPerVotingPower es 0", async function () {
+      await token.mint(user1.address, ethers.parseEther("1000"));
+      await token.connect(user1).approve(staking.target, ethers.parseEther("1000"));
+      await staking.connect(user1).stakeForVoting(ethers.parseEther("1000"));
+      
+      await parameters.setTokensPerVotingPower(0);
+      
+      const vp = await strategy.calculateVotingPower(user1.address);
+      expect(vp).to.equal(0);
+    });
+
+    it("Debe calcular correctamente con stake > 0 y tokensPerVP > 0", async function () {
+      await token.mint(user1.address, ethers.parseEther("300"));
+      await token.connect(user1).approve(staking.target, ethers.parseEther("300"));
+      await staking.connect(user1).stakeForVoting(ethers.parseEther("300"));
+      
+      // 300 tokens / 100 tokensPerVP = 3 VP
+      const vp = await strategy.calculateVotingPower(user1.address);
+      expect(vp).to.equal(3n);
+    });
+
+    it("Debe revertir si user es address(0)", async function () {
+      await expect(
+        strategy.calculateVotingPower(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(strategy, "InvalidAddress");
+    });
+  });
 });

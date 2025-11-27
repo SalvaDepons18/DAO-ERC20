@@ -192,5 +192,54 @@ describe("StrategyManager", function () {
       
       expect(await strategyManager.activeStrategy()).to.equal(strategy1.target);
     });
+
+    it("setActiveStrategy debe ejecutar todas las ramas cuando es válido", async function () {
+      // Cubre rama: _newStrategy != address(0) (true)
+      // Cubre rama: _newStrategy != activeStrategy (true)
+      await strategyManager.setActiveStrategy(strategy2.target);
+      expect(await strategyManager.activeStrategy()).to.equal(strategy2.target);
+    });
+
+    it("getActiveStrategy debe retornar la interfaz correcta", async function () {
+      const active = await strategyManager.getActiveStrategy();
+      expect(active).to.equal(strategy1.target);
+    });
+
+    it("getActiveStrategyAddress debe retornar la dirección correcta", async function () {
+      const addr = await strategyManager.getActiveStrategyAddress();
+      expect(addr).to.equal(strategy1.target);
+    });
+
+    it("setActiveStrategy debe actualizar activeStrategy y emitir evento", async function () {
+      const tx = await strategyManager.setActiveStrategy(strategy2.target);
+      const receipt = await tx.wait();
+      
+      expect(await strategyManager.activeStrategy()).to.equal(strategy2.target);
+      
+      // Verificar que el evento fue emitido
+      const events = receipt.logs.filter(log => {
+        try {
+          return strategyManager.interface.parseLog(log)?.name === "StrategyChanged";
+        } catch {
+          return false;
+        }
+      });
+      expect(events.length).to.equal(1);
+    });
+
+    it("Constructor debe inicializar activeStrategy como IVotingStrategy", async function () {
+      // strategy1 es un SimpleMajorityStrategy válido
+      const newManager = await StrategyManager.deploy(strategy1.target);
+      await newManager.waitForDeployment();
+      
+      const active = await newManager.getActiveStrategy();
+      expect(active).to.equal(strategy1.target);
+    });
+
+    it("activeStrategy es accesible directamente como variable pública", async function () {
+      const activeViaVar = await strategyManager.activeStrategy();
+      const activeViaGetter = await strategyManager.getActiveStrategyAddress();
+      expect(activeViaVar).to.equal(activeViaGetter);
+    });
   });
 });

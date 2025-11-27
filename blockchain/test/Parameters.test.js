@@ -185,6 +185,38 @@ describe("Parameters", function () {
       expect(await parameters.proposalDuration()).to.equal(0);
       expect(await parameters.tokenPrice()).to.equal(0);
     });
+
+    // Branch Coverage - Cubrir rama owner != address(0) en constructor
+    it("Constructor con owner válido no revierte", async function () {
+      const newParams = await Parameters.deploy(owner.address);
+      await newParams.waitForDeployment();
+      expect(await newParams.owner()).to.equal(owner.address);
+    });
+
+    // Branch Coverage - Setters deben emitir eventos con valores correctos
+    it("setMinStakeForProposing emite evento correctamente", async function () {
+      await expect(parameters.setMinStakeForProposing(100))
+        .to.emit(parameters, "MinStakeForProposingChanged")
+        .withArgs(0, 100);
+    });
+
+    it("setStakingLockTime emite evento correctamente", async function () {
+      await expect(parameters.setStakingLockTime(7200))
+        .to.emit(parameters, "StakingLockTimeChanged")
+        .withArgs(0, 7200);
+    });
+
+    it("setProposalDuration emite evento correctamente", async function () {
+      await expect(parameters.setProposalDuration(14400))
+        .to.emit(parameters, "ProposalDurationChanged")
+        .withArgs(0, 14400);
+    });
+
+    it("setTokenPrice emite evento correctamente", async function () {
+      await expect(parameters.setTokenPrice(999))
+        .to.emit(parameters, "TokenPriceChanged")
+        .withArgs(0, 999);
+    });
   });
 
 });

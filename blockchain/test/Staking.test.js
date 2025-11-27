@@ -534,6 +534,19 @@ describe("Staking", function () {
 
       expect(await staking.lockedUntilProposing(user.address)).to.equal(block.timestamp + LOCK_TIME);
     });
+
+    it("getProposingStake retorna el stake correcto", async () => {
+      await sha.connect(user).approve(staking.target, 300);
+      await staking.connect(user).stakeForProposing(300);
+      expect(await staking.getProposingStake(user.address)).to.equal(300);
+    });
+
+    it("totalProposalStaked se actualiza correctamente", async () => {
+      expect(await staking.totalProposalStaked()).to.equal(0);
+      await sha.connect(user).approve(staking.target, 400);
+      await staking.connect(user).stakeForProposing(400);
+      expect(await staking.totalProposalStaked()).to.equal(400);
+    });
   });
 
 });

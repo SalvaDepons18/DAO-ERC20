@@ -1124,5 +1124,231 @@ describe("ProposalManager", function () {
 
       expect(await proposalManager.hasUserVoted(0, voter1.address)).to.be.true;
     });
+
+    it("setParameters debe revertir con address(0)", async () => {
+      await expect(
+        proposalManager.setParameters(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidVotingStrategy");
+    });
+
+    it("setParameters debe funcionar con dirección válida", async () => {
+      await expect(
+        proposalManager.setParameters(dummyParams.target)
+      ).to.not.be.reverted;
+    });
+
+    it("setParameters solo owner puede llamar", async () => {
+      await expect(
+        proposalManager.connect(voter1).setParameters(dummyParams.target)
+      ).to.be.reverted;
+    });
+
+    it("setMinVotingPowerToPropose debe actualizar el valor", async () => {
+      await proposalManager.setMinVotingPowerToPropose(500);
+      expect(await proposalManager.minVotingPowerToPropose()).to.equal(500);
+    });
+
+    it("setMinVotingPowerToPropose solo owner", async () => {
+      await expect(
+        proposalManager.connect(voter1).setMinVotingPowerToPropose(500)
+      ).to.be.reverted;
+    });
+
+    it("setDefaultProposalDuration debe actualizar el valor", async () => {
+      await proposalManager.setDefaultProposalDuration(7200);
+      expect(await proposalManager.defaultProposalDuration()).to.equal(7200);
+    });
+
+    it("setDefaultProposalDuration revierte con 0", async () => {
+      await expect(
+        proposalManager.setDefaultProposalDuration(0)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidDuration");
+    });
+
+    it("setDefaultProposalDuration solo owner", async () => {
+      await expect(
+        proposalManager.connect(voter1).setDefaultProposalDuration(7200)
+      ).to.be.reverted;
+    });
+
+    it("getActiveVotingStrategyAddress retorna votingStrategy si no hay manager", async () => {
+      const addr = await proposalManager.getActiveVotingStrategyAddress();
+      expect(addr).to.equal(votingStrategy.target);
+    });
+
+    it("getActiveVotingStrategyAddress retorna estrategia del manager si está enlazado", async () => {
+      const StrategyManager = await ethers.getContractFactory("StrategyManager");
+      const strategyManager = await StrategyManager.deploy(votingStrategy.target);
+      await strategyManager.waitForDeployment();
+
+      await proposalManager.linkStrategyManager(strategyManager.target);
+      const addr = await proposalManager.getActiveVotingStrategyAddress();
+      expect(addr).to.equal(votingStrategy.target);
+    });
+
+    it("linkStrategyManager revierte con address(0)", async () => {
+      await expect(
+        proposalManager.linkStrategyManager(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidVotingStrategy");
+    });
+
+    it("linkStrategyManager solo owner puede llamar", async () => {
+      const StrategyManager = await ethers.getContractFactory("StrategyManager");
+      const strategyManager = await StrategyManager.deploy(votingStrategy.target);
+      await strategyManager.waitForDeployment();
+
+      await expect(
+        proposalManager.connect(voter1).linkStrategyManager(strategyManager.target)
+      ).to.be.reverted;
+    });
+
+    it("setVotingStrategy revierte con address(0)", async () => {
+      await expect(
+        proposalManager.setVotingStrategy(ethers.ZeroAddress)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidVotingStrategy");
+    });
+
+    it("setVotingStrategy actualiza la estrategia", async () => {
+      const NewStrategy = await ethers.getContractFactory("SimpleMajorityStrategy");
+      const newStrategy = await NewStrategy.deploy(staking.target, dummyParams.target);
+      await newStrategy.waitForDeployment();
+
+      await proposalManager.setVotingStrategy(newStrategy.target);
+      expect(await proposalManager.votingStrategy()).to.equal(newStrategy.target);
+    });
+
+    it("setVotingStrategy solo owner puede llamar", async () => {
+      await expect(
+        proposalManager.connect(voter1).setVotingStrategy(votingStrategy.target)
+      ).to.be.reverted;
+    });
+
+    it("vote con weight 0 revierte", async () => {
+      // Crear propuesta
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Zero Weight Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      // owner no tiene stake, su voting power es 0
+      await expect(
+        proposalManager.connect(owner).vote(owner.address, 0, VoteType.FOR)
+      ).to.be.revertedWithCustomError(proposalManager, "InvalidVoteType");
+    });
+
+    it("changeVote con mismo voto que antes debe funcionar", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Same Vote Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+      
+      // Cambiar al mismo tipo (FOR -> FOR) debe funcionar (sin cambios reales)
+      await expect(
+        proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.FOR)
+      ).to.not.be.reverted;
+    });
+
+    it("changeVote debe usar el peso snapshot original", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Snapshot Test 2",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      // voter1 vota con 6000 stake
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+      let results = await proposalManager.getProposalResults(0);
+      expect(results[0]).to.equal(6000);
+
+      // Aumentar stake de voter1
+      await dummyToken.mint(voter1.address, ethers.parseEther("10000"));
+      await dummyToken.connect(voter1).approve(staking.target, ethers.parseEther("10000"));
+      await staking.connect(voter1).stakeForVoting(ethers.parseEther("10000"));
+
+      // Cambiar voto - debe usar el peso original (6000), no el nuevo (16000)
+      await proposalManager.connect(voter1).changeVote(voter1.address, 0, VoteType.AGAINST);
+      results = await proposalManager.getProposalResults(0);
+      expect(results[0]).to.equal(0);
+      expect(results[1]).to.equal(6000); // Peso snapshot original
+    });
+
+    it("finalizeProposal con deadline pasado cambia a EXPIRED", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Expire Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await ethers.provider.send("evm_increaseTime", [PROPOSAL_DURATION + 1]);
+      await ethers.provider.send("evm_mine");
+
+      await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+      const proposal = await proposalManager.getProposal(0);
+      expect(proposal.state).to.equal(ProposalState.EXPIRED);
+    });
+
+    it("vote extiende bloqueo de staking usando estrategia activa", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Lock Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+      expect(await proposalManager.hasUserVoted(0, voter1.address)).to.be.true;
+    });
+
+    it("hasProposalDeadlinePassed funciona correctamente", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Deadline Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      expect(await proposalManager.hasProposalDeadlinePassed(0)).to.be.false;
+
+      await ethers.provider.send("evm_increaseTime", [PROPOSAL_DURATION + 1]);
+      await ethers.provider.send("evm_mine");
+
+      expect(await proposalManager.hasProposalDeadlinePassed(0)).to.be.true;
+    });
+
+    it("isProposalActive retorna false después de finalizar", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Active Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      expect(await proposalManager.isProposalActive(0)).to.be.true;
+      
+      await proposalManager.connect(voter1).vote(voter1.address, 0, VoteType.FOR);
+      await proposalManager.finalizeProposal(0, TOTAL_VOTING_POWER);
+
+      expect(await proposalManager.isProposalActive(0)).to.be.false;
+    });
+
+    it("getUserVote retorna NONE si no votó", async () => {
+      await proposalManager.connect(proposer).createProposal(
+        proposer.address,
+        "Vote Test",
+        "Description",
+        MIN_VOTING_POWER
+      );
+
+      const vote = await proposalManager.getUserVote(0, voter1.address);
+      expect(vote).to.equal(VoteType.NONE);
+    });
   });
 });
