@@ -12,8 +12,8 @@ export const CONTRACT_ADDRESSES = {
   panicManager: import.meta.env.VITE_PANIC_MANAGER_ADDRESS || "0x0000000000000000000000000000000000000000",
 };
 
-// Red por defecto (Hardhat)
-export const DEFAULT_CHAIN_ID = 31337;
+// Red por defecto configurable
+export const DEFAULT_CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID || 31337);
 export const NETWORKS = {
   31337: {
     name: "Hardhat",
@@ -25,6 +25,6 @@ export const NETWORKS = {
   },
   11155111: {
     name: "Sepolia",
-    rpcUrl: "https://sepolia.infura.io/v3/",
+    rpcUrl: import.meta.env.VITE_RPC_URL || "https://sepolia.infura.io/v3/YOUR_KEY",
   },
 };

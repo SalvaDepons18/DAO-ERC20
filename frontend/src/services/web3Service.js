@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { CONTRACT_ADDRESSES, DEFAULT_CHAIN_ID } from "../config/contracts";
+import { CONTRACT_ADDRESSES, DEFAULT_CHAIN_ID, NETWORKS } from "../config/contracts";
 
 // Importar ABIs
 import DAOAbiJson from "../abi/DAO.json";
@@ -119,26 +119,27 @@ export const initWeb3 = async () => {
         method: "eth_requestAccounts",
       });
       
-      // Verificar y cambiar a la red Hardhat si es necesario
+      // Verificar y cambiar a la red configurada si es necesario
       try {
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        // Hardhat usa chainId 0x7a69 (31337 en decimal)
-        if (chainId !== '0x7a69') {
+        const targetHex = '0x' + DEFAULT_CHAIN_ID.toString(16);
+        if (chainId.toLowerCase() !== targetHex.toLowerCase()) {
           try {
             await window.ethereum.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x7a69' }],
+              params: [{ chainId: targetHex }],
             });
           } catch (switchError) {
             // Si la red no está agregada, agregarla
             if (switchError.code === 4902) {
+              const netCfg = NETWORKS[DEFAULT_CHAIN_ID] || { rpcUrl: "" };
               await window.ethereum.request({
                 method: 'wallet_addEthereumChain',
                 params: [
                   {
-                    chainId: '0x7a69',
-                    rpcUrls: ['http://127.0.0.1:8545/'],
-                    chainName: 'Hardhat',
+                    chainId: targetHex,
+                    rpcUrls: [netCfg.rpcUrl],
+                    chainName: netCfg.name || `Chain ${DEFAULT_CHAIN_ID}`,
                     nativeCurrency: {
                       name: 'ETH',
                       symbol: 'ETH',
@@ -173,7 +174,8 @@ export const initWeb3 = async () => {
  */
 export const getProvider = () => {
   if (!provider) {
-    provider = new ethers.JsonRpcProvider("http://localhost:8545");
+    const netCfg = NETWORKS[DEFAULT_CHAIN_ID] || { rpcUrl: "http://localhost:8545" };
+    provider = new ethers.JsonRpcProvider(netCfg.rpcUrl);
   }
   return provider;
 };
