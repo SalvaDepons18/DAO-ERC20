@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { initWeb3, getSigner } from '../services/web3Service';
+import { initWeb3, getSigner, initPhantomWallet, isPhantomWalletAvailable } from '../services/web3Service';
 
 export default function WalletConnect() {
   const [account, setAccount] = useState(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [walletType, setWalletType] = useState(null); // 'metamask' or 'phantom'
+  const [showWalletOptions, setShowWalletOptions] = useState(false);
 
   useEffect(() => {
     // Verificar si ya hay cuenta conectada
@@ -42,21 +44,46 @@ export default function WalletConnect() {
     }
   }, []);
 
-  const connectWallet = async () => {
+  const connectMetaMask = async () => {
     if (!window.ethereum) {
-      alert('Por favor instala MetaMask o similar');
+      alert('Por favor instala MetaMask');
       return;
     }
 
     try {
       setIsConnecting(true);
+      setShowWalletOptions(false);
       const signer = await initWeb3();
       const address = await signer.getAddress();
       setAccount(address);
-      console.log('✅ Wallet conectada:', address);
+      setWalletType('metamask');
+      console.log('✅ MetaMask conectada:', address);
     } catch (error) {
-      console.error('❌ Error conectando wallet:', error);
-      alert('Error al conectar wallet: ' + error.message);
+      console.error('❌ Error conectando MetaMask:', error);
+      alert('Error al conectar MetaMask: ' + error.message);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const connectPhantom = async () => {
+    if (!isPhantomWalletAvailable()) {
+      alert('Por favor instala Phantom Wallet');
+      window.open('https://phantom.app/', '_blank');
+      return;
+    }
+
+    try {
+      setIsConnecting(true);
+      setShowWalletOptions(false);
+      const signer = await initPhantomWallet();
+      const address = await signer.getAddress();
+      setAccount(address);
+      setWalletType('phantom');
+      console.log('✅ Phantom Wallet conectada:', address);
+    } catch (error) {
+      console.error('❌ Error conectando Phantom:', error);
+      alert('Error al conectar Phantom Wallet: ' + error.message);
     } finally {
       setIsConnecting(false);
     }
@@ -70,16 +97,38 @@ export default function WalletConnect() {
   return (
     <div className="wallet-connect">
       {!account ? (
-        <button 
-          onClick={connectWallet} 
-          className="btn btn-primary"
-          disabled={isConnecting}
-        >
-          {isConnecting ? 'Conectando...' : 'Conectar Wallet'}
-        </button>
+        <div className="wallet-selector">
+          <button 
+            onClick={() => setShowWalletOptions(!showWalletOptions)} 
+            className="btn btn-primary"
+            disabled={isConnecting}
+          >
+            {isConnecting ? 'Conectando...' : 'Conectar Wallet'}
+          </button>
+          
+          {showWalletOptions && (
+            <div className="wallet-options">
+              <button 
+                onClick={connectMetaMask}
+                className="wallet-option"
+                disabled={isConnecting}
+              >
+                <span>MetaMask</span>
+              </button>
+              <button 
+                onClick={connectPhantom}
+                className="wallet-option"
+                disabled={isConnecting}
+              >
+                <span>Phantom Wallet</span>
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="wallet-info">
           <span className="address">
+            {walletType && <span className="wallet-badge">{walletType === 'metamask' ? '🦊' : '👻'}</span>}
             {account.slice(0, 6)}...{account.slice(-4)}
           </span>
           <button onClick={disconnectWallet} className="btn btn-secondary">

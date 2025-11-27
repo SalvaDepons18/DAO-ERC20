@@ -45,7 +45,71 @@ const ensureReady = async () => {
 // Eliminado assertNotPanicked: la verificación de pánico se hace on-chain vía modifier notInPanic.
 
 /**
- * Inicializar el proveedor y el signer
+ * Verificar si Phantom Wallet está disponible
+ */
+export const isPhantomWalletAvailable = () => {
+  return typeof window.phantom !== "undefined" && window.phantom.ethereum;
+};
+
+/**
+ * Inicializar Phantom Wallet
+ */
+export const initPhantomWallet = async () => {
+  if (!window.phantom?.ethereum) {
+    throw new Error("Phantom Wallet no está instalado");
+  }
+
+  const phantomProvider = window.phantom.ethereum;
+
+  try {
+    const accounts = await phantomProvider.request({
+      method: "eth_requestAccounts",
+    });
+    
+    // Verificar y cambiar a la red Hardhat
+    try {
+      const chainId = await phantomProvider.request({ method: 'eth_chainId' });
+      if (chainId !== '0x7a69') {
+        try {
+          await phantomProvider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x7a69' }],
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            await phantomProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x7a69',
+                rpcUrls: ['http://127.0.0.1:8545/'],
+                chainName: 'Hardhat',
+                nativeCurrency: {
+                  name: 'ETH',
+                  symbol: 'ETH',
+                  decimals: 18,
+                },
+              }],
+            });
+          } else {
+            throw switchError;
+          }
+        }
+      }
+    } catch (chainError) {
+      console.warn('Error al cambiar red en Phantom:', chainError);
+    }
+
+    provider = new ethers.BrowserProvider(phantomProvider);
+    signer = await provider.getSigner();
+    return signer;
+  } catch (error) {
+    console.error('Error en initPhantomWallet:', error);
+    throw error;
+  }
+};
+
+/**
+ * Inicializar el proveedor y el signer (MetaMask por defecto)
  */
 export const initWeb3 = async () => {
   if (typeof window.ethereum !== "undefined") {
@@ -478,6 +542,26 @@ export const hasUserVoted = async (proposalId, userAddress) => {
   return await dao.hasUserVoted(proposalId, userAddress);
 };
 
+// ====== DAO Owner Functions ======
+
+/**
+ * Obtener el owner del DAO
+ */
+export const getDAOOwner = async () => {
+  const dao = await getDAOContract(true);
+  return await dao.owner();
+};
+
+/**
+ * Transferir ownership del DAO (solo owner)
+ */
+export const transferDAOOwnership = async (newOwner) => {
+  await ensureReady();
+  const dao = await getDAOContract();
+  const tx = await dao.transferOwnership(newOwner);
+  return await tx.wait();
+};
+
 // ====== Panic Manager Functions ======
 
 /**
@@ -486,6 +570,44 @@ export const hasUserVoted = async (proposalId, userAddress) => {
 export const isPanicked = async () => {
   const dao = await getDAOContract(true);
   return await dao.isPanicked();
+};
+
+/**
+ * Obtener la dirección del operador de pánico
+ */
+export const getPanicOperator = async () => {
+  const panicManager = await getPanicManagerContract(true);
+  return await panicManager.panicOperator();
+};
+
+/**
+ * Activar modo pánico (solo operador)
+ */
+export const activatePanic = async () => {
+  await ensureReady();
+  const panicManager = await getPanicManagerContract(false);
+  const tx = await panicManager.panic();
+  return await tx.wait();
+};
+
+/**
+ * Desactivar modo pánico / Calm (solo operador)
+ */
+export const deactivatePanic = async () => {
+  await ensureReady();
+  const panicManager = await getPanicManagerContract(false);
+  const tx = await panicManager.calm();
+  return await tx.wait();
+};
+
+/**
+ * Cambiar operador de pánico (solo DAO owner)
+ */
+export const setPanicOperator = async (newOperatorAddress) => {
+  await ensureReady();
+  const panicManager = await getPanicManagerContract(false);
+  const tx = await panicManager.setPanicOperator(newOperatorAddress);
+  return await tx.wait();
 };
 
 // Central helper: which actions are DAO-gated by panic

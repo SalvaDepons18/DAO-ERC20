@@ -68,6 +68,11 @@
     },
     {
       "inputs": [],
+      "name": "PanicOperatorNotConfigured",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "StrategyError",
       "type": "error"
     },
@@ -727,6 +732,19 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

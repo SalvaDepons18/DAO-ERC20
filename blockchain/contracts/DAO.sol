@@ -28,9 +28,10 @@ contract DAO {
     error EmptyString();
     error MinStakeNotMet();
     error StrategyError();
+    error PanicOperatorNotConfigured();
     
 
-    address public immutable owner;
+    address public owner;
 
     IGovernanceToken public token;
     IStaking public staking;
@@ -75,6 +76,19 @@ contract DAO {
         strategyManager = IStrategyManager(_strategyManager);
         parameters = IParameters(_parameters);
         panicManager = IPanicManager(_panicManager);
+        
+        // Validar que el operador de pánico esté configurado
+        address panicOp = IPanicManager(_panicManager).panicOperator();
+        if (panicOp == address(0)) revert PanicOperatorNotConfigured();
+    }
+    
+    /**
+     * @notice Permite transferir el ownership del DAO
+     * @param newOwner Nueva dirección del owner
+     */
+    function transferOwnership(address newOwner) external onlyOwner {
+        if (newOwner == address(0)) revert InvalidAddress();
+        owner = newOwner;
     }
 
     function buyTokens() external payable notInPanic {
