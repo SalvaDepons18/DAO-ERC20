@@ -90,14 +90,12 @@ export const initPhantomWallet = async () => {
         }
       }
     } catch (chainError) {
-      console.warn('Error al cambiar red en Phantom:', chainError);
     }
 
     provider = new ethers.BrowserProvider(phantomProvider);
     signer = await provider.getSigner();
     return signer;
   } catch (error) {
-    console.error('Error en initPhantomWallet:', error);
     throw error;
   }
 };
@@ -148,14 +146,12 @@ export const initWeb3 = async () => {
           }
         }
       } catch (chainError) {
-        console.warn('Error al cambiar red:', chainError);
       }
 
       provider = new ethers.BrowserProvider(window.ethereum);
       signer = await provider.getSigner();
       return signer;
     } catch (error) {
-      console.error('Error en initWeb3:', error);
       throw error;
     }
   } else {
@@ -195,7 +191,6 @@ export const getSigner = async () => {
         return signer;
       }
     } catch (error) {
-      console.warn('No se pudo recuperar el signer:', error);
     }
   }
   
@@ -212,7 +207,6 @@ const getContract = async (address, abi, isReadOnly = false) => {
   
   const signer = await getSigner();
   if (!signer) {
-    console.warn("No hay signer disponible, usando solo lectura");
     return new ethers.Contract(address, abi, getProvider());
   }
   return new ethers.Contract(address, abi, signer);

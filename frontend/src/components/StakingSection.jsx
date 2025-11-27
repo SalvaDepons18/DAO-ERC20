@@ -43,15 +43,13 @@ export default function StakingSection({ onTransactionSuccess }) {
       setCurrentProposingStake(proposingAmount);
       setVotingPower(vp.toString());
       
-      // Verificar pánico de forma opcional (puede fallar sin romper el componente)
       try {
         const p = await isPanicked();
         setPanicked(p);
       } catch (panicErr) {
-        console.warn('No se pudo verificar estado de pánico:', panicErr.message);
         setPanicked(false);
       }
-    } catch (e) { console.error('Error cargando stakes:', e); }
+    } catch (e) { }
   };
 
   const handleApprove = async (amount) => {
@@ -59,7 +57,7 @@ export default function StakingSection({ onTransactionSuccess }) {
     try {
       const hook = activeTab === 'voting' ? votingStakeHook : proposingStakeHook;
       await hook.approve(amount);
-      setSuccess('✅ Tokens aprobados! Ahora puedes hacer stake.');
+      setSuccess('Tokens aprobados! Ahora puedes hacer stake.');
     } catch (e) {
       const d = decodeRevert(e);
       if (d === 'InsufficientAllowance') setError('Debes aprobar los tokens primero (allowance insuficiente).');
@@ -113,7 +111,7 @@ export default function StakingSection({ onTransactionSuccess }) {
     try {
       const receipt = type === 'voting' ? await unstakeVoting() : await unstakeProposing();
       const txHash = receipt.hash || receipt.transactionHash;
-      setSuccess(`✅ Unstake exitoso! Hash: ${txHash}`);
+      setSuccess(`Unstake exitoso! Hash: ${txHash}`);
       await loadStakes();
       if (onTransactionSuccess) setTimeout(() => onTransactionSuccess(), 1500);
     } catch (e) {
@@ -121,8 +119,8 @@ export default function StakingSection({ onTransactionSuccess }) {
       if (d === 'StakeLocked' || d === 'InsufficientStake') {
         const lockMsg = params ? (params.lockTimeDays > 0 ? `${params.lockTimeDays} días` : `${params.lockTimeSeconds} segundos`) : 'el periodo de bloqueo';
         setError(`Tu stake todavía está bloqueado. Debes esperar ${lockMsg}.`);
-      } else if (/user (rejected|denied)/i.test(e.message||'')) setError('❌ Transacción rechazada por el usuario.');
-      else setError(`❌ ${d}`);
+      } else if (/user (rejected|denied)/i.test(e.message||'')) setError('Transacción rechazada por el usuario.');
+      else setError(`Error: ${d}`);
     } finally { setLoading(false); }
   };
 
@@ -144,9 +142,9 @@ export default function StakingSection({ onTransactionSuccess }) {
               <button type="submit" className="btn btn-primary" disabled={loading || approving}>{loading ? 'Procesando...' : '2. Stake para Votar'}</button>
             </div>
           </form>
-          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>{paramsLoading ? 'Cargando parámetros...' : (params && `ℹ️ Mínimo actual: ${params.minStakeVoting} tokens`)}</p>
-          {params && <p style={{ fontSize: '0.75em', color: '#666', marginTop: '4px' }}>⏱️ Lock: {params.lockTimeDays > 0 ? `${params.lockTimeDays} días` : `${params.lockTimeSeconds} s`}</p>}
-          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '4px' }}>🗳️ Poder de voto actual: <strong>{votingPower}</strong></p>
+          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>{paramsLoading ? 'Cargando parámetros...' : (params && `Mínimo actual: ${params.minStakeVoting} tokens`)}</p>
+          {params && <p style={{ fontSize: '0.75em', color: '#666', marginTop: '4px' }}>Lock: {params.lockTimeDays > 0 ? `${params.lockTimeDays} días` : `${params.lockTimeSeconds} s`}</p>}
+          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '4px' }}>Poder de voto actual: <strong>{votingPower}</strong></p>
           <div className="current-stake">
             <p>Stake actual: <strong>{currentVotingStake} SHA</strong></p>
             {parseFloat(currentVotingStake) > 0 && <button className="btn btn-secondary" onClick={() => handleUnstake('voting')} disabled={loading}>Retirar Stake</button>}
@@ -162,8 +160,8 @@ export default function StakingSection({ onTransactionSuccess }) {
               <button type="submit" className="btn btn-primary" disabled={loading || approving}>{loading ? 'Procesando...' : '2. Stake para Proponer'}</button>
             </div>
           </form>
-          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>{paramsLoading ? 'Cargando parámetros...' : (params && `ℹ️ Mínimo actual: ${params.minStakeProposing} tokens`)}</p>
-          {params && <p style={{ fontSize: '0.75em', color: '#666', marginTop: '4px' }}>⏱️ Lock: {params.lockTimeDays > 0 ? `${params.lockTimeDays} días` : `${params.lockTimeSeconds} s`}</p>}
+          <p style={{ fontSize: '0.9em', color: '#666', marginTop: '8px' }}>{paramsLoading ? 'Cargando parámetros...' : (params && `Mínimo actual: ${params.minStakeProposing} tokens`)}</p>
+          {params && <p style={{ fontSize: '0.75em', color: '#666', marginTop: '4px' }}>Lock: {params.lockTimeDays > 0 ? `${params.lockTimeDays} días` : `${params.lockTimeSeconds} s`}</p>}
           <div className="current-stake">
             <p>Stake actual: <strong>{currentProposingStake} SHA</strong></p>
             {parseFloat(currentProposingStake) > 0 && <button className="btn btn-secondary" onClick={() => handleUnstake('proposing')} disabled={loading}>Retirar Stake</button>}

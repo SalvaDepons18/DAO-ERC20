@@ -22,7 +22,6 @@ export default function TokenBalance({ symbol = 'SHA', refreshTrigger = 0 }) {
       const userBalance = await getTokenBalance(address);
       setBalance(parseFloat(userBalance).toFixed(4));
     } catch (error) {
-      console.error('Error cargando balance:', error);
       setBalance('0');
     } finally {
       setLoading(false);

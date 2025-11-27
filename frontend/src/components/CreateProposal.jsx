@@ -19,7 +19,7 @@ export default function CreateProposal({ onTransactionSuccess }) {
     try {
       const receipt = await createProposal(title, description);
       const txHash = receipt.hash || receipt.transactionHash;
-      setSuccess(`✅ Propuesta creada! Tx: ${txHash}`);
+      setSuccess(`Propuesta creada! Tx: ${txHash}`);
       setTitle(''); setDescription('');
       onTransactionSuccess && onTransactionSuccess();
     } catch (e) {

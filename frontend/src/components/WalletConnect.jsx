@@ -21,11 +21,9 @@ export default function WalletConnect() {
             try {
               await initWeb3();
             } catch (e) {
-              console.warn('Error inicializando web3 en checkConnection:', e);
             }
           }
         } catch (error) {
-          console.error('Error verificando conexión:', error);
         }
       }
     };
@@ -58,7 +56,6 @@ export default function WalletConnect() {
       setAccount(address);
       setWalletType('metamask');
     } catch (error) {
-      console.error('❌ Error conectando MetaMask:', error);
       alert('Error al conectar MetaMask: ' + error.message);
     } finally {
       setIsConnecting(false);
@@ -80,7 +77,6 @@ export default function WalletConnect() {
       setAccount(address);
       setWalletType('phantom');
     } catch (error) {
-      console.error('❌ Error conectando Phantom:', error);
       alert('Error al conectar Phantom Wallet: ' + error.message);
     } finally {
       setIsConnecting(false);

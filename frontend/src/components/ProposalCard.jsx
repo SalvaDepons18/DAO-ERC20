@@ -41,11 +41,11 @@ export default function ProposalCard({ proposal, onProposalUpdated }) {
         
         <div className="proposal-stats">
           <div className="stat">
-            <span className="label">✅ A Favor</span>
+            <span className="label">A Favor</span>
             <span className="value">{proposal.votesFor}</span>
           </div>
           <div className="stat">
-            <span className="label">❌ En Contra</span>
+            <span className="label">En Contra</span>
             <span className="value">{proposal.votesAgainst}</span>
           </div>
           <div className="stat">

@@ -27,14 +27,12 @@ function App() {
   useEffect(() => {
     loadDashboardData();
     let detachBlockListener;
-    // Escuchar nuevos bloques para refrescar datos (reemplaza polling)
     if (window.ethereum && window.ethers) {
       try {
         const provider = new window.ethers.BrowserProvider(window.ethereum);
         provider.on('block', () => { loadDashboardData(); });
         detachBlockListener = () => provider.removeAllListeners('block');
       } catch (e) {
-        console.warn('No se pudo inicializar listener de bloques, fallback a polling.', e.message);
         const interval = setInterval(loadDashboardData, 15000);
         detachBlockListener = () => clearInterval(interval);
       }
@@ -89,7 +87,6 @@ function App() {
           const state = await getProposalState(i);
           if (state === 'ACTIVE') activeCount++;
         } catch (e) {
-          console.warn('Error leyendo estado de propuesta', i, e.message);
         }
       }
 
@@ -99,7 +96,6 @@ function App() {
         loading: false
       });
     } catch (error) {
-      console.error('Error cargando datos del dashboard:', error);
       setDashboardData({
         votingPower: '0',
         activeProposals: 0,
@@ -109,8 +105,6 @@ function App() {
   };
 
   const handleTransactionSuccess = () => {
-    // Disparar actualización del dashboard con un pequeño delay
-    // para asegurar que la blockchain haya procesado el bloque
     setTimeout(() => {
       setRefreshTrigger(prev => prev + 1);
     }, 500);
